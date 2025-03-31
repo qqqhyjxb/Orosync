@@ -1,8 +1,18 @@
 package model
 
+const (
+	Leader int = iota
+	Follower
+	Candidate
+)
+
 // UAV 无人机信息
 type UAV struct {
-	Uid              string      `json:"uid"`               // 唯一ID
+	// base
+	Uid  string `json:"uid"`  // 唯一ID
+	Role int    `json:"role"` // // 无人机角色：Leader、Follower、Candidate
+	Term int    `json:"term"` // 当前的任期号
+	// state
 	ElectricQuantity float32     `json:"electric_quantity"` //电量
 	CPU              CPUInfo     `json:"cpu"`
 	Memory           MemoryInfo  `json:"memory"`
