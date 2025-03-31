@@ -2,6 +2,7 @@ package model
 
 // UAV 无人机信息
 type UAV struct {
+	Uid              string      `json:"uid"`               // 唯一ID
 	ElectricQuantity float32     `json:"electric_quantity"` //电量
 	CPU              CPUInfo     `json:"cpu"`
 	Memory           MemoryInfo  `json:"memory"`
