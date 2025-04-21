@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package raft;
+
+option go_package = "./raft;";  //
+
+message SendUAVInfoReq {
+  UAVInfo uav = 1;
+}
+
+// 无人机信息
+message UAVInfo {
+  string uid = 1;
+  string time = 2;
+  string address = 3;
+  string port = 4;
+  Position position = 5;
+  Battery battery = 6;
+  CPUInfo cpu = 7;
+  MemoryInfo memory = 8;
+  NetWorkInfo network = 9;
+}
+
+// 位置信息
+message Position{
+  float x = 1;
+  float y = 2;
+  float z = 3;
+}
+
+// 电池状态
+message Battery{
+  float capacity = 1;
+}
+
+// cpu状态
+message CPUInfo {
+  float capacity = 1;          // 最大资源
+  float surplus_capacity = 2;  // 剩余资源
+  float usage_rate = 3;        // 剩余资源
+}
+
+// 内存内存
+message MemoryInfo {
+  float capacity = 1;            // 最大资源
+  float surplus_capacity = 2;    // 剩余资源
+  float usage_rate = 3;          // 使用率
+}
+
+// 网络状态
+message NetWorkInfo {
+  float bandwidth = 1;   // 带宽
+  float delay = 2;       // 延迟
+}
+
+message SendUAVInfoResp {
+  string code = 1;
+  string leader_uid = 2;
+}
+
+// leader: 日志分发
+message AppendLogReq {
+  int64 term = 1;
+  string leader_uid = 2;
+  int64 prev_log_index = 3;
+  int64 prev_log_term = 4;
+  LogsInfo logs = 5;
+  int64 leader_commit = 6;
+}
+
+message LogsInfo {
+  int64 index = 1;
+  int64 count = 2;
+  repeated string uid_list = 3;
+  map<string,UAVInfo> uav_map = 4;
+}
+
+message AppendLogResp {
+  string code = 1;
+  int64  term = 2;
+  string leader_uid = 3;
+}
+
+message VoteReq {
+  int64 term = 1;
+  string candidate_uid = 2;
+  int64 last_log_index = 3;
+  int64 last_log_term = 4;
+}
+
+message VoteResp {
+  int64 term = 1;
+  string leader_uid = 2;
+  bool vote_granted = 3;
+}
+
+service RaftService {
+  rpc SendUAVInfo(SendUAVInfoReq) returns(SendUAVInfoResp);
+  rpc AppendLog(AppendLogReq) returns(AppendLogResp);
+  rpc Vote(VoteReq) returns(VoteResp);
+}
+
+

@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package rpc.v1;
+
+option go_package = "./simulation";  //
+
+
+//传输无人机状态的请求
+message  DroneStatusRequest {
+    string uid = 1;       //无人机编号
+    string time = 2;
+    string address = 3;
+    string port = 4;
+    Position position = 5;
+    Battery battery = 6;
+    CPUInfo cpu = 7;
+    MemoryInfo memory = 8;
+    NetWorkInfo network = 9;
+}
+//传输无人机状态的响应
+message DroneStatusResponse{
+    string code = 1;
+    string msg  = 2;
+}
+
+// 位置信息
+message Position{
+    float x = 1;
+    float y = 2;
+    float z = 3;
+}
+
+// 电池状态
+message Battery{
+    float capacity = 1;
+}
+
+// cpu状态
+message CPUInfo {
+    float capacity = 1;          // 最大资源
+    float surplus_capacity = 2;  // 剩余资源
+    float usage_rate = 3;        // 剩余资源
+}
+
+// 内存内存
+message MemoryInfo {
+    float capacity = 1;            // 最大资源
+    float surplus_capacity = 2;    // 剩余资源
+    float usage_rate = 3;          // 使用率
+}
+
+// 网络状态
+message NetWorkInfo {
+    float bandwidth = 1;   // 带宽Mbps
+    float delay = 2;       // 延迟ms
+}
+
+message DroneSwarmChangeRequest{
+    int32 change_type = 1; // 1: 添加无人机 2：删除无人机
+    repeated string drone_uid_list = 2; // 变更的无人机的uid，添加时填入新无人机的uid，删除时填入要删除的无人机的uid
+}
+
+message DroneSwarmChangeResponse{
+    string code = 1;
+    string msg = 2;
+    string address = 3;
+    string port = 4;
+}
+
+//任务信息
+message Task {
+    int32 task_id = 1;           //任务ID
+    string type = 2;             //任务类型
+    int32 priority = 3;          //任务优先级
+    float required_cpu = 4;      // 任务执行所需的最低CPU
+    float required_memory = 5;   // 任务执行所需的最低内存
+    map<string, float> cost = 6; // 资源消耗速率（每秒消耗电量）
+    Position target = 7;         // 目标位置（格式："x,y,z"）
+    int32 task_parents = 8;
+    int32 task_children = 9;
+    string status = 10;          //任务状态
+}
+
+// 任务分配
+message TaskAssignment {
+    string task_id = 1; // 分配的任务 ID
+    string drone_id = 2; // 分配的无人机 ID
+    int32 priority = 3; // 任务优先级
+    string target = 4;  // 目标位置
+    map<string, float> cost = 5; // 资源消耗速率
+}
+
+//任务发送请求
+message TasksSendRequest{
+    repeated Task tasks = 1;
+}
+
+//任务发送回复
+message TasksSendResponse{
+    bool success = 1;
+}
+
+//任务添加请求
+message AddTaskRequest {
+    bool task = 1;
+}
+
+//任务添加回复
+message AddTaskResponse {
+    bool success = 1;
+}
+
+//任务分配结果
+message TaskAssignmentRequest{
+    repeated TaskAssignment results = 1;
+}
+
+//确认任务分配结果
+message TaskAssignmentResponse{
+    bool success = 1;
+}
+
+//服务接口，无人机传输状态并接受任务
+service SimulationService {
+    // 传输无人机状态
+    rpc DroneStatus(DroneStatusRequest) returns (DroneStatusResponse);
+    // 无人机集群变更
+    rpc DroneSwarmChange(DroneSwarmChangeRequest) returns(DroneSwarmChangeResponse);
+    // 传输任务信息
+    rpc TasksSend(TasksSendRequest) returns (TasksSendResponse);
+    // 添加任务
+    rpc AddTask(AddTaskRequest) returns (AddTaskResponse);
+    // 任务分配结果
+    rpc TaskAssignment(TaskAssignmentRequest) returns(TaskAssignmentResponse);
+}
