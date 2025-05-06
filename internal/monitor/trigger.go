@@ -10,18 +10,18 @@ type TriggerMechanism struct {
 	Thresholds     []float64 // 指标阈值
 	Weights        []float64 // 各指标权重
 	ScoreThreshold float64   // 综合评分阈值
-	TriggerCount   int       // 触发计数器
+	LagCount       int       // 连续触发次数
 	TriggerHistory []bool    // 记录历史触发状态（最多保存三次）
 }
 
 // InitTriggerMechanism 初始化触发机制
-func InitTriggerMechanism(weights []float64, thresholds []float64, scoreThreshold float64) *TriggerMechanism {
+func InitTriggerMechanism(weights []float64, thresholds []float64, scoreThreshold float64, lagCount int) *TriggerMechanism {
 	return &TriggerMechanism{
 		Thresholds:     thresholds,
 		Weights:        weights,
 		ScoreThreshold: scoreThreshold,
-		TriggerCount:   0,
-		TriggerHistory: make([]bool, 3), // 滞后区间记录，最多保存三次
+		LagCount:       lagCount,
+		TriggerHistory: make([]bool, lagCount), // 滞后区间记录，最多保存lagCount次
 	}
 }
 
@@ -55,11 +55,17 @@ func (t *TriggerMechanism) LevelTwoTrigger(metrics []float64) bool {
 	return false
 }
 
-// CheckLagPeriod 滞后区间触发机制（连续三次触发）
+// CheckLagPeriod 滞后区间触发机制（连续多次触发）
 func (t *TriggerMechanism) CheckLagPeriod() bool {
-	// 滞后区间为3次连续触发
-	if len(t.TriggerHistory) == 3 && t.TriggerHistory[0] && t.TriggerHistory[1] && t.TriggerHistory[2] {
-		return true
+	// 检查是否已连续满足触发条件
+	if len(t.TriggerHistory) == t.LagCount {
+		count := 0
+		for _, triggered := range t.TriggerHistory {
+			if triggered {
+				count++
+			}
+		}
+		return count == t.LagCount // 如果历史记录中连续满足条件的次数等于lagCount，则触发
 	}
 	return false
 }
@@ -67,17 +73,16 @@ func (t *TriggerMechanism) CheckLagPeriod() bool {
 // EvaluateTrigger 执行触发判定
 func (t *TriggerMechanism) EvaluateTrigger(metrics []float64) bool {
 	// 检查第一级触发
-	if t.LevelOneTrigger(metrics) {
-		return true
-	}
+	levelOneTriggered := t.LevelOneTrigger(metrics)
 
 	// 检查第二级触发
-	if t.LevelTwoTrigger(metrics) {
-		// 更新触发历史
+	levelTwoTriggered := t.LevelTwoTrigger(metrics)
+
+	// 如果任何一级触发，则更新历史并检查滞后区间
+	if levelOneTriggered || levelTwoTriggered {
 		t.TriggerHistory = append(t.TriggerHistory[1:], true) // 记录当前触发
-		// 如果连续三次满足触发条件，则进入滞后区间
 		if t.CheckLagPeriod() {
-			fmt.Println("Lag Period Trigger: Executing balancing task due to consecutive triggers.")
+			fmt.Println("Lag Period Trigger: Executing rebalancing task due to consecutive triggers.")
 			return true
 		}
 	} else {
@@ -91,13 +96,13 @@ func (t *TriggerMechanism) EvaluateTrigger(metrics []float64) bool {
 
 // MonitorAndTrigger 模拟主程序，调用触发机制进行判断
 func (a *APH) MonitorAndTrigger(metrics []float64) {
-	weight, err := a.GetLatestWeights()
+	weights, err := a.CalculateWeights()
 	if err != nil {
-		fmt.Printf("Error getting latest weights, err: %v\n", err.Error())
+		fmt.Printf("Error calculating weights: %v\n", err)
 	}
 
-	// 初始化触发机制
-	triggerMechanism := InitTriggerMechanism(weight, []float64{0.8, 0.75, 0.7, 0.65, 0.9}, 0.8)
+	// 初始化触发机制，滞后区间设置为3次连续触发
+	triggerMechanism := InitTriggerMechanism(weights, []float64{0.8, 0.75, 0.7, 0.65, 0.9}, 0.8, 3)
 
 	// 每次调用时监测指标
 	if triggerMechanism.EvaluateTrigger(metrics) {
