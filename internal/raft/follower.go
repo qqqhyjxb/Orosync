@@ -35,7 +35,7 @@ func (f *FollowerInstance) Stop() {
 	f.Status = StopStatus
 }
 
-// heartbeat 检测心跳
+// heartbeat 检测leader心跳
 func (f *FollowerInstance) heartbeat() {
 	for GlobalNode.Role == Follower {
 		time.Sleep(SleepTime * time.Millisecond) //心跳超时时间
@@ -56,7 +56,7 @@ func (f *FollowerInstance) heartbeat() {
 	}
 }
 
-// sendLogToLeader 定期发送自身状态给leader
+// sendLogToLeader 定期发送自身状态给leader，无并发问题
 func (f *FollowerInstance) sendLogToLeader() {
 	for GlobalNode.Role == Follower {
 		time.Sleep(AppendLogTime * time.Millisecond) //发送log的周期
@@ -65,9 +65,9 @@ func (f *FollowerInstance) sendLogToLeader() {
 
 		uav := &raft.UAVInfo{}
 
-		err := copier.Copy(&uav, &GlobalNode.UAV)
+		err := copier.Copy(uav, GlobalNode.Role)
 		if err != nil {
-			log.Printf("uid:%v  err:%v  time:%v\n", GlobalNode.UAV.Uid, err, time.Now())
+			return
 		}
 
 		req := &raft.SendUAVInfoReq{
@@ -84,7 +84,10 @@ func (f *FollowerInstance) sendLogToLeader() {
 
 		GlobalNode.LeaderUid = resp.GetLeaderUid()
 	}
+
 }
+
+// ReceiveLog log和心跳为一体
 func (f *FollowerInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogReq) (*raft.AppendLogResp, error) {
 	resp := &raft.AppendLogResp{}
 
@@ -107,9 +110,15 @@ func (f *FollowerInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogRe
 		return nil, err
 	}
 
+	// 检测到心跳
+	GlobalNode.HasHeartbeat = true
+
 	resp.Code = SuccessCode
 	resp.Term = GlobalNode.Term
 	resp.LeaderUid = GlobalNode.LeaderUid
+
+	// 更新为未投票状态
+	GlobalNode.IsVoted = false
 
 	return resp, nil
 }
@@ -118,14 +127,30 @@ func (f *FollowerInstance) ReceiveVote(ctx context.Context, req *raft.VoteReq) (
 	resp := &raft.VoteResp{}
 
 	// 若请求投票的candidate任期比当前小，说明当前任期已经过期
+	// 拒绝投票，并告诉candidate新leader的信息
 	if req.Term < GlobalNode.Term {
+		uav := &raft.UAVInfo{}
+
+		err := copier.Copy(&uav, &GlobalNode.UAV)
+		if err != nil {
+			log.Printf("uid:%v  err:%v  time:%v\n", GlobalNode.UAV.Uid, err, time.Now())
+		}
+
 		resp.Term = GlobalNode.Term
 		resp.LeaderUid = GlobalNode.LeaderUid
 		resp.VoteGranted = false
 		return resp, nil
 	}
 
+	// 已经投过票了，拒绝投票
+	if GlobalNode.IsVoted {
+		resp.VoteGranted = false
+		return resp, nil
+	}
+
+	// 同意投票
 	resp.VoteGranted = true
+	GlobalNode.IsVoted = true
 	return resp, nil
 }
 

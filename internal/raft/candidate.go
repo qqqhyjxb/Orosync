@@ -88,7 +88,7 @@ func (c *CandidateInstance) ReceiveVote(ctx context.Context, req *raft.VoteReq) 
 
 	go GlobalFollower.Start()
 
-	resp.VoteGranted = true
+	resp.VoteGranted = false
 	return resp, nil
 }
 
@@ -114,7 +114,7 @@ func (c *CandidateInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogR
 
 		c.Stop()
 
-		go GlobalCandidate.Start()
+		go GlobalFollower.Start()
 	}
 
 	return resp, nil

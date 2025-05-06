@@ -157,7 +157,7 @@ func (l *LeaderInstance) ReceiveVote(ctx context.Context, req *raft.VoteReq) (*r
 
 	go GlobalFollower.Start()
 
-	resp.VoteGranted = true
+	resp.VoteGranted = false
 	return resp, nil
 }
 

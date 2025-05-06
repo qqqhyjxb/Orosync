@@ -44,6 +44,7 @@ type Node struct {
 	PrevLogTerm  int64  // 前一个日志的任期号
 	LeaderCommit int64  // leader已提交的日志号
 	HasHeartbeat bool   // leader有心跳
+	IsVoted      bool   // 是否已经投票
 
 	// log
 	NewLogIndex int64
