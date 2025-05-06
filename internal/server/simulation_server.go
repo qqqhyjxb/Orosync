@@ -39,8 +39,8 @@ func (s *SimulationService) DroneSwarmChange(ctx context.Context,
 	if raft.GlobalNode.Role != raft.Leader {
 		resp.Code = raft.NotLeaderCode
 		resp.Msg = "not leader"
-		resp.Address = raft.GlobalNode.Logs[raft.GlobalNode.NewLogIndex].UavMap[raft.GlobalNode.LeaderUid].Address
-		resp.Port = raft.GlobalNode.Logs[raft.GlobalNode.NewLogIndex].UavMap[raft.GlobalNode.LeaderUid].Port
+		//resp.Address = raft.GlobalNode.Logs[raft.GlobalNode.NewLogIndex].UavMap[raft.GlobalNode.LeaderUid].Address
+		//resp.Port = raft.GlobalNode.Logs[raft.GlobalNode.NewLogIndex].UavMap[raft.GlobalNode.LeaderUid].Port
 	}
 
 	resp, err := raft.GlobalLeader.DroneSwarmChange(ctx, req)
