@@ -1,6 +1,9 @@
 package monitor
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 // APH 结构体包含判断矩阵
 type APH struct {
@@ -17,7 +20,6 @@ func InitGlobalAPH() {
 
 // Init 初始化判断矩阵
 func (a *APH) Init() {
-	// 根据具体的业务需求完善判断矩阵
 	a.JudgmentMatrix = [][]float64{
 		//         0:电量  1:CPU利用率  2:内存利用率 3:网络延迟 4:偏离距离
 		{1, 4, 4, 4, 5},              // 电量
@@ -68,28 +70,73 @@ func calculateWeights(normalizedMatrix [][]float64) []float64 {
 		for j := 0; j < len(normalizedMatrix[i]); j++ {
 			rowSum += normalizedMatrix[i][j]
 		}
-		weights[i] = rowSum / float64(len(normalizedMatrix[i])) // 计算每行的平均值
+		weights[i] = rowSum / float64(len(normalizedMatrix[i]))
 	}
 
 	return weights
 }
 
-// CalculateWeights 计算 AHP 权重
-func (a *APH) CalculateWeights() []float64 {
-	// 1. 计算每列的和
-	c := columnSums(a.JudgmentMatrix)
-	fmt.Println("Column Sums:", c)
+// calculateLambdaMax 计算判断矩阵的最大特征值
+func calculateLambdaMax(matrix [][]float64, weights []float64) float64 {
+	n := len(matrix)
+	sum := 0.0
 
-	// 2. 归一化矩阵
-	normalizedMatrix := normalizeMatrix(a.JudgmentMatrix, c)
-	fmt.Println("\nNormalized Matrix:")
-	for _, row := range normalizedMatrix {
-		fmt.Println(row)
+	for i := 0; i < n; i++ {
+		rowSum := 0.0
+		for j := 0; j < n; j++ {
+			rowSum += matrix[i][j] * weights[j]
+		}
+		sum += rowSum / weights[i]
 	}
 
-	// 3. 计算权重
+	return sum / float64(n)
+}
+
+// getRI 获取随机一致性指标
+func getRI(n int) float64 {
+	riTable := map[int]float64{
+		1:  0.0,
+		2:  0.0,
+		3:  0.58,
+		4:  0.90,
+		5:  1.12,
+		6:  1.24,
+		7:  1.32,
+		8:  1.41,
+		9:  1.45,
+		10: 1.49,
+	}
+	return riTable[n]
+}
+
+// checkConsistency 执行一致性检验
+func (a *APH) checkConsistency(weights []float64) (cr float64, valid bool) {
+	n := len(a.JudgmentMatrix)
+	if n <= 1 {
+		return 0.0, true
+	}
+
+	lambdaMax := calculateLambdaMax(a.JudgmentMatrix, weights)
+	ci := (lambdaMax - float64(n)) / float64(n-1)
+	ri := getRI(n)
+	cr = ci / ri
+
+	// 保留4位小数
+	cr = math.Round(cr*10000) / 10000
+	return cr, cr < 0.1
+}
+
+// CalculateWeights 计算 AHP 权重（添加一致性检验）
+func (a *APH) CalculateWeights() ([]float64, error) {
+	c := columnSums(a.JudgmentMatrix)
+	normalizedMatrix := normalizeMatrix(a.JudgmentMatrix, c)
 	weights := calculateWeights(normalizedMatrix)
-	return weights
+
+	if cr, valid := a.checkConsistency(weights); !valid {
+		return weights, fmt.Errorf("consistency check failed, CR=%.4f ≥ 0.1, please adjust judgment matrix", cr)
+	}
+
+	return weights, nil
 }
 
 // UpdateJudgmentMatrix 更新判断矩阵
@@ -99,39 +146,46 @@ func (a *APH) UpdateJudgmentMatrix(matrix [][]float64) {
 }
 
 // GetLatestWeights 获取最新的权重
-func (a *APH) GetLatestWeights() []float64 {
-	// 获取最新的权重值
-	weights := a.CalculateWeights()
-	return weights
+func (a *APH) GetLatestWeights() ([]float64, error) {
+	return a.CalculateWeights()
 }
 
-// Test 测试ahp
+// Test 测试方法
 func (a *APH) Test() {
-	// 计算权重
-	weights := GlobalAPH.CalculateWeights()
-
-	// 输出计算结果
-	for i, weight := range weights {
-		fmt.Printf("Indicator %d Weight: %f\n", i+1, weight)
+	fmt.Println("=== Initial Weights Test ===")
+	if weights, err := a.CalculateWeights(); err != nil {
+		fmt.Println("Initial Weights Calculation Results:")
+		printWeights(weights)
+		fmt.Println("❌ Error:", err)
+	} else {
+		fmt.Println("Initial Weights Calculation Results (Consistency Passed):")
+		printWeights(weights)
 	}
 
-	// 更新判断矩阵
+	// 更新测试矩阵
 	newMatrix := [][]float64{
-		// 更新后的矩阵
-		{1, 5, 4, 3, 6},
-		{0.2, 1, 2.5, 3.5, 4},
-		{0.25, 0.4, 1, 2, 3},
-		{0.3, 0.3, 0.5, 1, 3},
-		{0.125, 0.2, 0.3, 0.4, 1},
+		{1, 1.0 / 3, 1.0 / 2, 2, 1},
+		{3, 1, 2, 4, 3},
+		{2, 1.0 / 2, 1, 3, 2},
+		{1.0 / 2, 1.0 / 4, 1.0 / 3, 1, 1.0 / 2},
+		{1, 1.0 / 3, 1.0 / 2, 2, 1},
 	}
-	GlobalAPH.UpdateJudgmentMatrix(newMatrix)
+	a.UpdateJudgmentMatrix(newMatrix)
 
-	// 获取更新后的最新权重
-	latestWeights := GlobalAPH.GetLatestWeights()
+	fmt.Println("\n=== Updated Weights Test ===")
+	if weights, err := a.GetLatestWeights(); err != nil {
+		fmt.Println("Updated Weights Calculation Results:")
+		printWeights(weights)
+		fmt.Println("❌ Error:", err)
+	} else {
+		fmt.Println("Updated Weights Calculation Results (Consistency Passed):")
+		printWeights(weights)
+	}
+}
 
-	// 输出更新后的权重
-	fmt.Println("\nUpdated Weights:")
-	for i, weight := range latestWeights {
-		fmt.Printf("Updated Indicator %d Weight: %f\n", i+1, weight)
+// printWeights 辅助打印函数
+func printWeights(weights []float64) {
+	for i, weight := range weights {
+		fmt.Printf("Indicator %d Weight: %.4f\n", i+1, weight)
 	}
 }

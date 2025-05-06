@@ -3,13 +3,12 @@ package main
 import (
 	"Orosync/internal/monitor"
 	"Orosync/internal/raft"
-	"Orosync/internal/server"
 )
 
 func main() {
 	raft.InitRaft()
 
-	server.StartServer()
+	//server.StartServer()
 
 	monitor.InitGlobalAPH()
 	monitor.GlobalAPH.Init()
