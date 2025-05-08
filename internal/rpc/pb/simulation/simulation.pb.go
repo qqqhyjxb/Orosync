@@ -24,15 +24,17 @@ const (
 // 传输无人机状态的请求
 type DroneStatusRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Uid           string                 `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"` //无人机编号
-	Time          string                 `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"`
-	Address       string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`
-	Port          string                 `protobuf:"bytes,4,opt,name=port,proto3" json:"port,omitempty"`
-	Position      *Position              `protobuf:"bytes,5,opt,name=position,proto3" json:"position,omitempty"`
-	Battery       *Battery               `protobuf:"bytes,6,opt,name=battery,proto3" json:"battery,omitempty"`
-	Cpu           *CPUInfo               `protobuf:"bytes,7,opt,name=cpu,proto3" json:"cpu,omitempty"`
-	Memory        *MemoryInfo            `protobuf:"bytes,8,opt,name=memory,proto3" json:"memory,omitempty"`
-	Network       *NetWorkInfo           `protobuf:"bytes,9,opt,name=network,proto3" json:"network,omitempty"`
+	Uid           string                 `protobuf:"bytes,1,opt,name=uid,proto3" json:"uid,omitempty"`           //无人机编号
+	Time          string                 `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"`         //当前时间
+	Address       string                 `protobuf:"bytes,3,opt,name=address,proto3" json:"address,omitempty"`   //ip地址
+	Port          string                 `protobuf:"bytes,4,opt,name=port,proto3" json:"port,omitempty"`         //无人机端口
+	Position      *Position              `protobuf:"bytes,5,opt,name=position,proto3" json:"position,omitempty"` //无人机位置
+	Battery       *Battery               `protobuf:"bytes,6,opt,name=battery,proto3" json:"battery,omitempty"`   //电池
+	Cpu           *CPUInfo               `protobuf:"bytes,7,opt,name=cpu,proto3" json:"cpu,omitempty"`           //CPU
+	Memory        *MemoryInfo            `protobuf:"bytes,8,opt,name=memory,proto3" json:"memory,omitempty"`     //内存
+	Network       *NetWorkInfo           `protobuf:"bytes,9,opt,name=network,proto3" json:"network,omitempty"`   //带宽与延迟
+	Tasks         []*Task                `protobuf:"bytes,10,rep,name=tasks,proto3" json:"tasks,omitempty"`      //当前这正负载所有无人机的信息
+	Status        string                 `protobuf:"bytes,11,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -128,6 +130,20 @@ func (x *DroneStatusRequest) GetNetwork() *NetWorkInfo {
 		return x.Network
 	}
 	return nil
+}
+
+func (x *DroneStatusRequest) GetTasks() []*Task {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+func (x *DroneStatusRequest) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
 }
 
 // 传输无人机状态的响应
@@ -294,7 +310,7 @@ type CPUInfo struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Capacity        float32                `protobuf:"fixed32,1,opt,name=capacity,proto3" json:"capacity,omitempty"`                                      // 最大资源
 	SurplusCapacity float32                `protobuf:"fixed32,2,opt,name=surplus_capacity,json=surplusCapacity,proto3" json:"surplus_capacity,omitempty"` // 剩余资源
-	UsageRate       float32                `protobuf:"fixed32,3,opt,name=usage_rate,json=usageRate,proto3" json:"usage_rate,omitempty"`                   // 剩余资源
+	UsageRate       float32                `protobuf:"fixed32,3,opt,name=usage_rate,json=usageRate,proto3" json:"usage_rate,omitempty"`                   // 占用率
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -588,15 +604,18 @@ func (x *DroneSwarmChangeResponse) GetPort() string {
 type Task struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	TaskId         int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                                                          //任务ID
-	Type           string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`                                                                             //任务类型
+	Type           string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`                                                                             //任务类型，分为abcd四种，a为电量密集型，b为计算密集型，c表示内存密集型，d表示同意网络密集型
 	Priority       int32                  `protobuf:"varint,3,opt,name=priority,proto3" json:"priority,omitempty"`                                                                    //任务优先级
-	RequiredCpu    float32                `protobuf:"fixed32,4,opt,name=required_cpu,json=requiredCpu,proto3" json:"required_cpu,omitempty"`                                          // 任务执行所需的最低CPU
-	RequiredMemory float32                `protobuf:"fixed32,5,opt,name=required_memory,json=requiredMemory,proto3" json:"required_memory,omitempty"`                                 // 任务执行所需的最低内存
-	Cost           map[string]float32     `protobuf:"bytes,6,rep,name=cost,proto3" json:"cost,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed32,2,opt,name=value"` // 资源消耗速率（每秒消耗电量）
-	Target         *Position              `protobuf:"bytes,7,opt,name=target,proto3" json:"target,omitempty"`                                                                         // 目标位置（格式："x,y,z"）
-	TaskParents    int32                  `protobuf:"varint,8,opt,name=task_parents,json=taskParents,proto3" json:"task_parents,omitempty"`
-	TaskChildren   int32                  `protobuf:"varint,9,opt,name=task_children,json=taskChildren,proto3" json:"task_children,omitempty"`
-	Status         string                 `protobuf:"bytes,10,opt,name=status,proto3" json:"status,omitempty"` //任务状态
+	RequiredCpu    float32                `protobuf:"fixed32,4,opt,name=required_cpu,json=requiredCpu,proto3" json:"required_cpu,omitempty"`                                          // 任务执行所需的最低CPU能力
+	CpuUsage       float32                `protobuf:"fixed32,5,opt,name=cpu_usage,json=cpuUsage,proto3" json:"cpu_usage,omitempty"`                                                   //任务执行cpu占比
+	RequiredMemory float32                `protobuf:"fixed32,6,opt,name=required_memory,json=requiredMemory,proto3" json:"required_memory,omitempty"`                                 // 任务执行所需的最低内存
+	Cost           map[string]float32     `protobuf:"bytes,7,rep,name=cost,proto3" json:"cost,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed32,2,opt,name=value"` // 资源消耗速率（每秒消耗电量）
+	Target         *Position              `protobuf:"bytes,8,opt,name=target,proto3" json:"target,omitempty"`                                                                         // 目标位置（格式："x,y,z"）
+	TaskParents    []int32                `protobuf:"varint,9,rep,packed,name=task_parents,json=taskParents,proto3" json:"task_parents,omitempty"`
+	TaskChildren   []int32                `protobuf:"varint,10,rep,packed,name=task_children,json=taskChildren,proto3" json:"task_children,omitempty"`
+	Status         string                 `protobuf:"bytes,11,opt,name=status,proto3" json:"status,omitempty"`     //任务状态0表示未开始，1表示已分配，2表示进行中，3表示已完成
+	Duration       string                 `protobuf:"bytes,12,opt,name=duration,proto3" json:"duration,omitempty"` //任务持续时间
+	Surplus        string                 `protobuf:"bytes,13,opt,name=surplus,proto3" json:"surplus,omitempty"`   //任务剩余时间
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -659,6 +678,13 @@ func (x *Task) GetRequiredCpu() float32 {
 	return 0
 }
 
+func (x *Task) GetCpuUsage() float32 {
+	if x != nil {
+		return x.CpuUsage
+	}
+	return 0
+}
+
 func (x *Task) GetRequiredMemory() float32 {
 	if x != nil {
 		return x.RequiredMemory
@@ -680,18 +706,18 @@ func (x *Task) GetTarget() *Position {
 	return nil
 }
 
-func (x *Task) GetTaskParents() int32 {
+func (x *Task) GetTaskParents() []int32 {
 	if x != nil {
 		return x.TaskParents
 	}
-	return 0
+	return nil
 }
 
-func (x *Task) GetTaskChildren() int32 {
+func (x *Task) GetTaskChildren() []int32 {
 	if x != nil {
 		return x.TaskChildren
 	}
-	return 0
+	return nil
 }
 
 func (x *Task) GetStatus() string {
@@ -701,14 +727,25 @@ func (x *Task) GetStatus() string {
 	return ""
 }
 
+func (x *Task) GetDuration() string {
+	if x != nil {
+		return x.Duration
+	}
+	return ""
+}
+
+func (x *Task) GetSurplus() string {
+	if x != nil {
+		return x.Surplus
+	}
+	return ""
+}
+
 // 任务分配
 type TaskAssignment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	TaskId        string                 `protobuf:"bytes,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                                                           // 分配的任务 ID
-	DroneId       string                 `protobuf:"bytes,2,opt,name=drone_id,json=droneId,proto3" json:"drone_id,omitempty"`                                                        // 分配的无人机 ID
-	Priority      int32                  `protobuf:"varint,3,opt,name=priority,proto3" json:"priority,omitempty"`                                                                    // 任务优先级
-	Target        string                 `protobuf:"bytes,4,opt,name=target,proto3" json:"target,omitempty"`                                                                         // 目标位置
-	Cost          map[string]float32     `protobuf:"bytes,5,rep,name=cost,proto3" json:"cost,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed32,2,opt,name=value"` // 资源消耗速率
+	TaskId        int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"` // 分配的任务 ID
+	UavUid        string                 `protobuf:"bytes,2,opt,name=uav_uid,json=uavUid,proto3" json:"uav_uid,omitempty"`  // 分配的无人机 uid
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -743,39 +780,18 @@ func (*TaskAssignment) Descriptor() ([]byte, []int) {
 	return file_internal_rpc_proto_simulation_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *TaskAssignment) GetTaskId() string {
+func (x *TaskAssignment) GetTaskId() int32 {
 	if x != nil {
 		return x.TaskId
-	}
-	return ""
-}
-
-func (x *TaskAssignment) GetDroneId() string {
-	if x != nil {
-		return x.DroneId
-	}
-	return ""
-}
-
-func (x *TaskAssignment) GetPriority() int32 {
-	if x != nil {
-		return x.Priority
 	}
 	return 0
 }
 
-func (x *TaskAssignment) GetTarget() string {
+func (x *TaskAssignment) GetUavUid() string {
 	if x != nil {
-		return x.Target
+		return x.UavUid
 	}
 	return ""
-}
-
-func (x *TaskAssignment) GetCost() map[string]float32 {
-	if x != nil {
-		return x.Cost
-	}
-	return nil
 }
 
 // 任务发送请求
@@ -1052,7 +1068,7 @@ var File_internal_rpc_proto_simulation_proto protoreflect.FileDescriptor
 
 const file_internal_rpc_proto_simulation_proto_rawDesc = "" +
 	"\n" +
-	"#internal/rpc/proto/simulation.proto\x12\x06rpc.v1\"\xbf\x02\n" +
+	"#internal/rpc/proto/simulation.proto\x12\x06rpc.v1\"\xfb\x02\n" +
 	"\x12DroneStatusRequest\x12\x10\n" +
 	"\x03uid\x18\x01 \x01(\tR\x03uid\x12\x12\n" +
 	"\x04time\x18\x02 \x01(\tR\x04time\x12\x18\n" +
@@ -1062,7 +1078,10 @@ const file_internal_rpc_proto_simulation_proto_rawDesc = "" +
 	"\abattery\x18\x06 \x01(\v2\x0f.rpc.v1.BatteryR\abattery\x12!\n" +
 	"\x03cpu\x18\a \x01(\v2\x0f.rpc.v1.CPUInfoR\x03cpu\x12*\n" +
 	"\x06memory\x18\b \x01(\v2\x12.rpc.v1.MemoryInfoR\x06memory\x12-\n" +
-	"\anetwork\x18\t \x01(\v2\x13.rpc.v1.NetWorkInfoR\anetwork\";\n" +
+	"\anetwork\x18\t \x01(\v2\x13.rpc.v1.NetWorkInfoR\anetwork\x12\"\n" +
+	"\x05tasks\x18\n" +
+	" \x03(\v2\f.rpc.v1.TaskR\x05tasks\x12\x16\n" +
+	"\x06status\x18\v \x01(\tR\x06status\";\n" +
 	"\x13DroneStatusResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x10\n" +
 	"\x03msg\x18\x02 \x01(\tR\x03msg\"4\n" +
@@ -1094,31 +1113,28 @@ const file_internal_rpc_proto_simulation_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x10\n" +
 	"\x03msg\x18\x02 \x01(\tR\x03msg\x12\x18\n" +
 	"\aaddress\x18\x03 \x01(\tR\aaddress\x12\x12\n" +
-	"\x04port\x18\x04 \x01(\tR\x04port\"\x8a\x03\n" +
+	"\x04port\x18\x04 \x01(\tR\x04port\"\xdd\x03\n" +
 	"\x04Task\x12\x17\n" +
 	"\atask_id\x18\x01 \x01(\x05R\x06taskId\x12\x12\n" +
 	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1a\n" +
 	"\bpriority\x18\x03 \x01(\x05R\bpriority\x12!\n" +
-	"\frequired_cpu\x18\x04 \x01(\x02R\vrequiredCpu\x12'\n" +
-	"\x0frequired_memory\x18\x05 \x01(\x02R\x0erequiredMemory\x12*\n" +
-	"\x04cost\x18\x06 \x03(\v2\x16.rpc.v1.Task.CostEntryR\x04cost\x12(\n" +
-	"\x06target\x18\a \x01(\v2\x10.rpc.v1.PositionR\x06target\x12!\n" +
-	"\ftask_parents\x18\b \x01(\x05R\vtaskParents\x12#\n" +
-	"\rtask_children\x18\t \x01(\x05R\ftaskChildren\x12\x16\n" +
-	"\x06status\x18\n" +
-	" \x01(\tR\x06status\x1a7\n" +
+	"\frequired_cpu\x18\x04 \x01(\x02R\vrequiredCpu\x12\x1b\n" +
+	"\tcpu_usage\x18\x05 \x01(\x02R\bcpuUsage\x12'\n" +
+	"\x0frequired_memory\x18\x06 \x01(\x02R\x0erequiredMemory\x12*\n" +
+	"\x04cost\x18\a \x03(\v2\x16.rpc.v1.Task.CostEntryR\x04cost\x12(\n" +
+	"\x06target\x18\b \x01(\v2\x10.rpc.v1.PositionR\x06target\x12!\n" +
+	"\ftask_parents\x18\t \x03(\x05R\vtaskParents\x12#\n" +
+	"\rtask_children\x18\n" +
+	" \x03(\x05R\ftaskChildren\x12\x16\n" +
+	"\x06status\x18\v \x01(\tR\x06status\x12\x1a\n" +
+	"\bduration\x18\f \x01(\tR\bduration\x12\x18\n" +
+	"\asurplus\x18\r \x01(\tR\asurplus\x1a7\n" +
 	"\tCostEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x02R\x05value:\x028\x01\"\xe7\x01\n" +
+	"\x05value\x18\x02 \x01(\x02R\x05value:\x028\x01\"B\n" +
 	"\x0eTaskAssignment\x12\x17\n" +
-	"\atask_id\x18\x01 \x01(\tR\x06taskId\x12\x19\n" +
-	"\bdrone_id\x18\x02 \x01(\tR\adroneId\x12\x1a\n" +
-	"\bpriority\x18\x03 \x01(\x05R\bpriority\x12\x16\n" +
-	"\x06target\x18\x04 \x01(\tR\x06target\x124\n" +
-	"\x04cost\x18\x05 \x03(\v2 .rpc.v1.TaskAssignment.CostEntryR\x04cost\x1a7\n" +
-	"\tCostEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x02R\x05value:\x028\x01\"6\n" +
+	"\atask_id\x18\x01 \x01(\x05R\x06taskId\x12\x17\n" +
+	"\auav_uid\x18\x02 \x01(\tR\x06uavUid\"6\n" +
 	"\x10TasksSendRequest\x12\"\n" +
 	"\x05tasks\x18\x01 \x03(\v2\f.rpc.v1.TaskR\x05tasks\"-\n" +
 	"\x11TasksSendResponse\x12\x18\n" +
@@ -1136,7 +1152,7 @@ const file_internal_rpc_proto_simulation_proto_rawDesc = "" +
 	"\x10DroneSwarmChange\x12\x1f.rpc.v1.DroneSwarmChangeRequest\x1a .rpc.v1.DroneSwarmChangeResponse\x12@\n" +
 	"\tTasksSend\x12\x18.rpc.v1.TasksSendRequest\x1a\x19.rpc.v1.TasksSendResponse\x12:\n" +
 	"\aAddTask\x12\x16.rpc.v1.AddTaskRequest\x1a\x17.rpc.v1.AddTaskResponse\x12O\n" +
-	"\x0eTaskAssignment\x12\x1d.rpc.v1.TaskAssignmentRequest\x1a\x1e.rpc.v1.TaskAssignmentResponseB\x0eZ\f./simulationb\x06proto3"
+	"\x0eTaskAssignment\x12\x1d.rpc.v1.TaskAssignmentRequest\x1a\x1e.rpc.v1.TaskAssignmentResponseB\x0fZ\r./simulation;b\x06proto3"
 
 var (
 	file_internal_rpc_proto_simulation_proto_rawDescOnce sync.Once
@@ -1150,7 +1166,7 @@ func file_internal_rpc_proto_simulation_proto_rawDescGZIP() []byte {
 	return file_internal_rpc_proto_simulation_proto_rawDescData
 }
 
-var file_internal_rpc_proto_simulation_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_internal_rpc_proto_simulation_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_internal_rpc_proto_simulation_proto_goTypes = []any{
 	(*DroneStatusRequest)(nil),       // 0: rpc.v1.DroneStatusRequest
 	(*DroneStatusResponse)(nil),      // 1: rpc.v1.DroneStatusResponse
@@ -1170,7 +1186,6 @@ var file_internal_rpc_proto_simulation_proto_goTypes = []any{
 	(*TaskAssignmentRequest)(nil),    // 15: rpc.v1.TaskAssignmentRequest
 	(*TaskAssignmentResponse)(nil),   // 16: rpc.v1.TaskAssignmentResponse
 	nil,                              // 17: rpc.v1.Task.CostEntry
-	nil,                              // 18: rpc.v1.TaskAssignment.CostEntry
 }
 var file_internal_rpc_proto_simulation_proto_depIdxs = []int32{
 	2,  // 0: rpc.v1.DroneStatusRequest.position:type_name -> rpc.v1.Position
@@ -1178,9 +1193,9 @@ var file_internal_rpc_proto_simulation_proto_depIdxs = []int32{
 	4,  // 2: rpc.v1.DroneStatusRequest.cpu:type_name -> rpc.v1.CPUInfo
 	5,  // 3: rpc.v1.DroneStatusRequest.memory:type_name -> rpc.v1.MemoryInfo
 	6,  // 4: rpc.v1.DroneStatusRequest.network:type_name -> rpc.v1.NetWorkInfo
-	17, // 5: rpc.v1.Task.cost:type_name -> rpc.v1.Task.CostEntry
-	2,  // 6: rpc.v1.Task.target:type_name -> rpc.v1.Position
-	18, // 7: rpc.v1.TaskAssignment.cost:type_name -> rpc.v1.TaskAssignment.CostEntry
+	9,  // 5: rpc.v1.DroneStatusRequest.tasks:type_name -> rpc.v1.Task
+	17, // 6: rpc.v1.Task.cost:type_name -> rpc.v1.Task.CostEntry
+	2,  // 7: rpc.v1.Task.target:type_name -> rpc.v1.Position
 	9,  // 8: rpc.v1.TasksSendRequest.tasks:type_name -> rpc.v1.Task
 	10, // 9: rpc.v1.TaskAssignmentRequest.results:type_name -> rpc.v1.TaskAssignment
 	0,  // 10: rpc.v1.SimulationService.DroneStatus:input_type -> rpc.v1.DroneStatusRequest
@@ -1211,7 +1226,7 @@ func file_internal_rpc_proto_simulation_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_rpc_proto_simulation_proto_rawDesc), len(file_internal_rpc_proto_simulation_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   19,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

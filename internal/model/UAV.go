@@ -5,8 +5,8 @@ type UAV struct {
 	// base
 	Uid     string `json:"uid"` // 唯一ID
 	Time    string `json:"time" `
-	Address string `json:"ip"`
-	Port    string `json:"port"`
+	Address string `json:"address"`
+	Port    int    `json:"port"`
 
 	// state
 	Position PositionInfo `json:"position"`
@@ -14,7 +14,8 @@ type UAV struct {
 	CPU      CPUInfo      `json:"cpu"`
 	Memory   MemoryInfo   `json:"memory"`
 	Network  NetworkInfo  `json:"network"`
-	Tasks    TaskList     `json:"task"`
+	Tasks    []TaskInfo   `json:"tasks"`
+	Status   string       `json:"status"`
 }
 
 type PositionInfo struct {
@@ -47,16 +48,21 @@ type NetworkInfo struct {
 	Delay     float32 `json:"delay"`     // 网络延迟
 }
 
-// TaskList 任务信息
-type TaskList struct {
-	List  []TaskInfo `json:"list"`  // 列表
-	Count []int8     `json:"count"` // 任务数量
-}
-
 // TaskInfo 任务信息
 type TaskInfo struct {
-	// TODO: 完善任务具体信息
-	Type string `json:"type"` // 任务类型
+	TaskId        int32              `json:"task_id"`
+	Type          string             `json:"type"` // 任务类型
+	Priority      int32              `json:"priority"`
+	RequiredCPU   float32            `json:"required_cpu"`
+	CpuUsage      float32            `json:"cpu_usage"`
+	RequireMemory float32            `json:"require_memory"`
+	Cost          map[string]float32 `json:"cost"`
+	Target        PositionInfo       `json:"target"`
+	TaskParents   []int32            `json:"task_parents"`
+	TaskChildren  []int32            `json:"task_children"`
+	Status        string             `json:"status"`
+	Duration      string             `json:"duration"`
+	Surplus       string             `json:"surplus"`
 }
 
 func NewUAV() *UAV {

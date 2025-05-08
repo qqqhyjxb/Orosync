@@ -2,7 +2,7 @@ package raft
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"time"
 
 	"Orosync/internal/client"
@@ -26,6 +26,10 @@ func InitGlobalFollower() {
 // Start 开始follower的生命周期
 func (f *FollowerInstance) Start() {
 	f.Status = StartStatus
+	GlobalNode.Role = Follower
+	GlobalNode.IsVoted = false
+
+	fmt.Printf("new follower: %v\n", GlobalNode.UAV.Uid)
 
 	go f.sendLogToLeader()
 	go f.heartbeat()
@@ -59,13 +63,20 @@ func (f *FollowerInstance) heartbeat() {
 // sendLogToLeader 定期发送自身状态给leader，无并发问题
 func (f *FollowerInstance) sendLogToLeader() {
 	for GlobalNode.Role == Follower {
+
+		if GlobalNode.LeaderUid == "" {
+			continue
+		}
+
 		time.Sleep(AppendLogTime * time.Millisecond) //发送log的周期
 
 		ctx := context.Background()
 
+		GlobalNode.UAV.Time = time.Now().String()
+
 		uav := &raft.UAVInfo{}
 
-		err := copier.Copy(uav, GlobalNode.Role)
+		err := copier.Copy(uav, GlobalNode.UAV)
 		if err != nil {
 			return
 		}
@@ -74,17 +85,21 @@ func (f *FollowerInstance) sendLogToLeader() {
 			Uav: uav,
 		}
 
-		resp, err := client.GlobalRaftClient.
-			StartClient(GlobalNode.Logs.UavMap[GlobalNode.LeaderUid].Address).
-			Client.
-			SendUAVInfo(ctx, req)
+		// 获取客户端连接（自动复用）
+		clientObj, err := client.GlobalRaftClient.StartClient(
+			GlobalNode.Logs.UavMap[GlobalNode.LeaderUid].Address,
+		)
 		if err != nil {
-			log.Printf("uid:%v  err:%v  time:%v\n", GlobalNode.UAV.Uid, err, time.Now())
+			fmt.Printf("连接失败: %v\n", err)
+			continue
 		}
 
-		GlobalNode.LeaderUid = resp.GetLeaderUid()
+		// 使用复用的连接发起请求
+		resp, err := clientObj.Client.SendUAVInfo(ctx, req)
+		if err != nil || resp.Code != SuccessCode {
+			fmt.Printf("请求失败 uid:%v err:%v \n", GlobalNode.UAV.Uid, err)
+		}
 	}
-
 }
 
 // ReceiveLog log和心跳为一体
@@ -113,6 +128,8 @@ func (f *FollowerInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogRe
 	// 检测到心跳
 	GlobalNode.HasHeartbeat = true
 
+	GlobalNode.LeaderUid = req.LeaderUid
+
 	resp.Code = SuccessCode
 	resp.Term = GlobalNode.Term
 	resp.LeaderUid = GlobalNode.LeaderUid
@@ -129,13 +146,6 @@ func (f *FollowerInstance) ReceiveVote(ctx context.Context, req *raft.VoteReq) (
 	// 若请求投票的candidate任期比当前小，说明当前任期已经过期
 	// 拒绝投票，并告诉candidate新leader的信息
 	if req.Term < GlobalNode.Term {
-		uav := &raft.UAVInfo{}
-
-		err := copier.Copy(&uav, &GlobalNode.UAV)
-		if err != nil {
-			log.Printf("uid:%v  err:%v  time:%v\n", GlobalNode.UAV.Uid, err, time.Now())
-		}
-
 		resp.Term = GlobalNode.Term
 		resp.LeaderUid = GlobalNode.LeaderUid
 		resp.VoteGranted = false

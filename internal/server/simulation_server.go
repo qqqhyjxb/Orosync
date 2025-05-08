@@ -21,6 +21,8 @@ func (s *SimulationService) DroneStatus(ctx context.Context,
 	if err != nil {
 		resp.Code = raft.FailCode
 		resp.Msg = err.Error()
+
+		fmt.Printf("copier.Copy err:%v\n", err)
 		return resp, err
 	}
 

@@ -1,0 +1,69 @@
+is_test_mode: true
+env: "development"
+port: 8080
+
+logs:
+  index: 0
+  count: 5
+  uid_list:
+    - "UAV001"
+    - "UAV002"
+    - "UAV003"
+    - "UAV004"
+    - "UAV005"
+#    - "UAV006"
+#    - "UAV007"
+#    - "UAV008"
+#    - "UAV009"
+#    - "UAV010"
+  uav_map:
+    UAV001:
+      uid: "UAV001"
+      time: "2025-05-08T10:00:00Z"
+      address: "192.168.1.87:40000"
+      port: 40000
+    UAV002:
+      uid: "UAV002"
+      time: "2025-05-08T10:05:00Z"
+      address: "192.168.1.87:40001"
+      port: 40001
+    UAV003:
+      uid: "UAV003"
+      time: "2025-05-08T10:10:00Z"
+      address: "192.168.1.87:40002"
+      port: 40002
+    UAV004:
+      uid: "UAV004"
+      time: "2025-05-08T10:15:00Z"
+      address: "192.168.1.87:40003"
+      port: 40003
+    UAV005:
+      uid: "UAV005"
+      time: "2025-05-08T10:20:00Z"
+      address: "192.168.1.87:40004"
+      port: 40004
+#    UAV006:
+#      uid: "UAV006"
+#      time: "2025-05-08T10:25:00Z"
+#      address: "192.168.1.87:40005"
+#      port: 40005
+#    UAV007:
+#      uid: "UAV007"
+#      time: "2025-05-08T10:30:00Z"
+#      address: "192.168.1.87:40006"
+#      port: 40006
+#    UAV008:
+#      uid: "UAV008"
+#      time: "2025-05-08T10:35:00Z"
+#      address: "192.168.1.87:40007"
+#      port: 40007
+#    UAV009:
+#      uid: "UAV009"
+#      time: "2025-05-08T10:40:00Z"
+#      address: "192.168.1.87:40008"
+#      port: 40008
+#    UAV010:
+#      uid: "UAV010"
+#      time: "2025-05-08T10:45:00Z"
+#      address: "192.168.1.87:40009"
+#      port: 40009

@@ -15,8 +15,8 @@ const (
 	StartStatus = "start"
 	StopStatus  = "stop"
 
-	SleepTime     = 300
-	AppendLogTime = 150
+	SleepTime     = 400
+	AppendLogTime = 100
 
 	SuccessCode = "0"
 
@@ -48,32 +48,39 @@ type Node struct {
 
 	// log
 	NewLogIndex int64
-	Logs        LogsInfo
+	Logs        *LogsInfo
 
 	// cluster
-	Cluster ClusterInfo
+	LocalGroup *GroupInfo
 
 	// UAV
 	UAV *model.UAV
+
+	// 各项指标阈值
+	BatteryThreshold  float32 //越小越靠近阈值
+	CpuUsageThreshold float32 //越大越靠近阈值
+	MemoryThreshold   float32 //越小越靠近阈值
+	DistanceThreshold float32 //越大越靠近阈值
 }
 
-type ClusterInfo struct {
+type GroupInfo struct {
 	UidList []string
 }
 
 type LogsInfo struct {
-	index   int64                // 日志的索引
-	Count   int64                // 无人机数量
-	UidList []string             // 无人机uid列表
-	UavMap  map[string]model.UAV // 日志
+	Index   int64                 `yaml:"index"`
+	Count   int64                 `yaml:"count"`
+	UidList []string              `yaml:"uid_list"`
+	UavMap  map[string]*model.UAV `yaml:"uav_map"`
 }
 
 var GlobalNode Node
 
-func InitGlobalNode() {
+func InitGlobalNode(uav *model.UAV, logs *LogsInfo) {
 	GlobalNode = Node{
 		Role: Follower,
-		UAV:  model.NewUAV(),
+		UAV:  uav,
+		Logs: logs,
 	}
 }
 

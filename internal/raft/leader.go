@@ -26,10 +26,14 @@ func InitGlobalLeader() {
 // Start 开始leader的新周期
 func (l *LeaderInstance) Start() {
 	l.Status = StartStatus
+	GlobalNode.Role = Leader
+
+	fmt.Printf("new leader: %v\n", GlobalNode.UAV.Uid)
 
 	ctx := context.Background()
 
 	go l.AppendLogs(ctx)
+	go l.UpdateAndPrintLogs()
 }
 
 func (l *LeaderInstance) Stop() {
@@ -59,7 +63,22 @@ func (l *LeaderInstance) AppendLogs(ctx context.Context) {
 		}
 
 		for _, u := range GlobalNode.Logs.UavMap {
-			response, err := client.GlobalRaftClient.StartClient(u.Address).Client.AppendLog(ctx, request)
+
+			// 跳过自己
+			if u.Uid == GlobalNode.UAV.Uid {
+				continue
+			}
+
+			// 获取客户端连接（自动复用）
+			clientObj, err := client.GlobalRaftClient.StartClient(
+				u.Address,
+			)
+			if err != nil {
+				fmt.Printf("连接失败: %v\n", err)
+				continue
+			}
+
+			response, err := clientObj.Client.AppendLog(ctx, request)
 			if err != nil {
 				// TODO：考虑无人机一直追加日志失败有没有兜底方案
 				continue
@@ -98,9 +117,10 @@ func (l *LeaderInstance) ReceiveLogFromEachUAV(ctx context.Context, req *raft.Se
 			return nil, err
 		}
 	} else {
-		return nil, fmt.Errorf("uav:%s is not exist", req.Uav.Uid)
+		return nil, fmt.Errorf("uav:%s is not exist  req.uid: %v", req.Uav.Uid, req.Uav.Uid)
 	}
 
+	resp.Code = SuccessCode
 	return resp, nil
 }
 
@@ -109,36 +129,36 @@ func (l *LeaderInstance) DroneSwarmChange(ctx context.Context,
 
 	resp := &simulation.DroneSwarmChangeResponse{}
 
-	if GlobalLeader.Status == StopStatus {
-		resp.Code = NotLeaderCode
-		resp.Msg = "uav is not leader"
-		return resp, nil
-	}
-
-	if req.ChangeType == AddUAV {
-		for _, u := range req.DroneUidList {
-			GlobalNode.Cluster.UidList = append(GlobalNode.Cluster.UidList, u)
-		}
-	} else if req.ChangeType == RemoveUAV {
-		var newUidList []string
-		var removeUidMap map[string]bool
-
-		for _, u := range req.DroneUidList {
-			removeUidMap[u] = true
-		}
-
-		for _, u := range GlobalNode.Cluster.UidList {
-			if removeUidMap[u] {
-				continue
-			}
-			newUidList = append(newUidList, u)
-		}
-
-		GlobalNode.Cluster.UidList = newUidList
-	} else {
-		resp.Code = FailCode
-		resp.Msg = "wrong change type"
-	}
+	//if GlobalLeader.Status == StopStatus {
+	//	resp.Code = NotLeaderCode
+	//	resp.Msg = "uav is not leader"
+	//	return resp, nil
+	//}
+	//
+	//if req.ChangeType == AddUAV {
+	//	for _, u := range req.DroneUidList {
+	//		GlobalNode.Cluster.UidList = append(GlobalNode.Cluster.UidList, u)
+	//	}
+	//} else if req.ChangeType == RemoveUAV {
+	//	var newUidList []string
+	//	var removeUidMap map[string]bool
+	//
+	//	for _, u := range req.DroneUidList {
+	//		removeUidMap[u] = true
+	//	}
+	//
+	//	for _, u := range GlobalNode.Cluster.UidList {
+	//		if removeUidMap[u] {
+	//			continue
+	//		}
+	//		newUidList = append(newUidList, u)
+	//	}
+	//
+	//	GlobalNode.Cluster.UidList = newUidList
+	//} else {
+	//	resp.Code = FailCode
+	//	resp.Msg = "wrong change type"
+	//}
 
 	return resp, nil
 }
@@ -178,4 +198,30 @@ func (l *LeaderInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogReq)
 	}
 
 	return resp, nil
+}
+
+func (l *LeaderInstance) UpdateAndPrintLogs() {
+	for GlobalNode.Role == Leader {
+
+		GlobalNode.UAV.Time = time.Now().String()
+
+		if v, ok := GlobalNode.Logs.UavMap[GlobalNode.UAV.Uid]; ok {
+			err := copier.Copy(v, GlobalNode.UAV)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			fmt.Printf("uav:%s is not exist\n", GlobalNode.UAV.Uid)
+		}
+
+		time.Sleep(2 * time.Second)
+
+		fmt.Printf("current leader: %s\n", GlobalNode.UAV.Uid)
+		fmt.Printf("current term: %d\n", GlobalNode.Term)
+		for _, u := range GlobalNode.Logs.UavMap {
+			fmt.Println(u)
+		}
+
+		fmt.Printf("\n\n\n\n")
+	}
 }

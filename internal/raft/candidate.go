@@ -4,6 +4,7 @@ import (
 	"Orosync/internal/client"
 	"Orosync/internal/rpc/pb/raft"
 	"context"
+	"fmt"
 )
 
 var GlobalCandidate *CandidateInstance
@@ -20,6 +21,9 @@ func InitGlobalCandidate() {
 
 func (c *CandidateInstance) Start() {
 	c.Status = StartStatus
+	GlobalNode.Role = Candidate
+
+	fmt.Printf("new candidate: %v\n", GlobalNode.UAV.Uid)
 
 	ctx := context.Background()
 	go c.Vote(ctx)
@@ -30,47 +34,77 @@ func (c *CandidateInstance) Stop() {
 }
 
 func (c *CandidateInstance) Vote(ctx context.Context) {
-	var voteCount int64
+	for GlobalNode.Role == Candidate {
 
-	request := &raft.VoteReq{
-		Term:         GlobalNode.Term,
-		CandidateUid: GlobalNode.UAV.Uid,
-		LastLogIndex: GlobalNode.LastLogIndex,
-		LastLogTerm:  GlobalNode.LastLogTerm,
-	}
+		var voteCount int64
 
-	for _, u := range GlobalNode.Logs.UavMap {
+		GlobalNode.Term = GlobalNode.Term + 1
 
-		// TODO:address需要再组装一下
-		response, err := client.GlobalRaftClient.StartClient(u.Address).Client.Vote(ctx, request)
-		if err != nil {
-			// 投票错误直接跳过
-			continue
+		request := &raft.VoteReq{
+			Term:         GlobalNode.Term,
+			CandidateUid: GlobalNode.UAV.Uid,
+			LastLogIndex: GlobalNode.LastLogIndex,
+			LastLogTerm:  GlobalNode.LastLogTerm,
 		}
 
-		// 已有新的leader,该candidate退出follower
-		if response.Term > GlobalNode.Term {
-			GlobalNode.Role = Follower
-			GlobalNode.Term = response.Term
-			GlobalNode.LeaderUid = response.LeaderUid
+		for _, u := range GlobalNode.Logs.UavMap {
+			// 跳过自己
+			if u.Uid == GlobalNode.UAV.Uid {
+				voteCount++
+				continue
+			}
+
+			// 获取客户端连接（自动复用）
+			clientObj, err := client.GlobalRaftClient.StartClient(
+				u.Address,
+			)
+			if err != nil {
+				fmt.Printf("连接失败: %v\n", err)
+				continue
+			}
+
+			response, err := clientObj.Client.Vote(ctx, request)
+			if err != nil {
+				// 投票错误直接跳过
+				fmt.Printf("uav: %v start vote err: %v  address: %v\n", GlobalNode.UAV.Uid, err, u.Address)
+				continue
+			}
+
+			fmt.Printf("u.uid: %v  uav.uid: %v\n", u.Uid, GlobalNode.UAV.Uid)
+			fmt.Printf("candidate response.Term: %v\n", response.Term)
+			fmt.Printf("candidate response.LeaderUid: %v\n", response.LeaderUid)
+			fmt.Printf("candidate response.VoteGranted: %v\n", response.VoteGranted)
+
+			// 已有新的leader,该candidate退出follower
+			if response.Term > GlobalNode.Term {
+				GlobalNode.Role = Follower
+				GlobalNode.Term = response.Term
+				GlobalNode.LeaderUid = response.LeaderUid
+
+				GlobalCandidate.Stop()
+
+				GlobalFollower.Start()
+
+				return
+			}
+
+			// 收到投票
+			if response.VoteGranted {
+				voteCount++
+			}
+		}
+
+		if voteCount > GlobalNode.Logs.Count/2 {
+			GlobalNode.Role = Leader
 
 			GlobalCandidate.Stop()
 
-			GlobalFollower.Start()
+			GlobalLeader.Start()
+
+			return
 		}
 
-		// 收到投票
-		if response.VoteGranted {
-			voteCount++
-		}
-	}
-
-	if voteCount > GlobalNode.Logs.Count/2 {
-		GlobalNode.Role = Leader
-
-		GlobalCandidate.Stop()
-
-		GlobalLeader.Start()
+		fmt.Printf("fail to candidate: %v  voteCount: %v\n", GlobalNode.UAV.Uid, voteCount)
 	}
 }
 

@@ -2,20 +2,21 @@ syntax = "proto3";
 
 package rpc.v1;
 
-option go_package = "./simulation";  //
-
+option go_package = "./simulation;";  //
 
 //传输无人机状态的请求
 message  DroneStatusRequest {
     string uid = 1;       //无人机编号
-    string time = 2;
-    string address = 3;
-    string port = 4;
-    Position position = 5;
-    Battery battery = 6;
-    CPUInfo cpu = 7;
-    MemoryInfo memory = 8;
-    NetWorkInfo network = 9;
+    string time = 2;        //当前时间
+    string address = 3;     //ip地址
+    string port = 4;    //无人机端口
+    Position position = 5;  //无人机位置
+    Battery battery = 6;    //电池
+    CPUInfo cpu = 7;    //CPU
+    MemoryInfo memory = 8;  //内存
+    NetWorkInfo network = 9;    //带宽与延迟
+    repeated Task tasks = 10;   //当前这正负载所有无人机的信息
+    string status = 11;
 }
 //传输无人机状态的响应
 message DroneStatusResponse{
@@ -39,7 +40,7 @@ message Battery{
 message CPUInfo {
     float capacity = 1;          // 最大资源
     float surplus_capacity = 2;  // 剩余资源
-    float usage_rate = 3;        // 剩余资源
+    float usage_rate = 3;        // 占用率
 }
 
 // 内存内存
@@ -70,24 +71,24 @@ message DroneSwarmChangeResponse{
 //任务信息
 message Task {
     int32 task_id = 1;           //任务ID
-    string type = 2;             //任务类型
+    string type = 2;             //任务类型，分为abcd四种，a为电量密集型，b为计算密集型，c表示内存密集型，d表示同意网络密集型
     int32 priority = 3;          //任务优先级
-    float required_cpu = 4;      // 任务执行所需的最低CPU
-    float required_memory = 5;   // 任务执行所需的最低内存
-    map<string, float> cost = 6; // 资源消耗速率（每秒消耗电量）
-    Position target = 7;         // 目标位置（格式："x,y,z"）
-    int32 task_parents = 8;
-    int32 task_children = 9;
-    string status = 10;          //任务状态
+    float required_cpu = 4;      // 任务执行所需的最低CPU能力
+    float cpu_usage = 5;         //任务执行cpu占比
+    float required_memory = 6;   // 任务执行所需的最低内存
+    map<string, float> cost = 7; // 资源消耗速率（每秒消耗电量）
+    Position target = 8;         // 目标位置（格式："x,y,z"）
+    repeated int32 task_parents = 9;
+    repeated int32 task_children = 10;
+    string status = 11;          //任务状态0表示未开始，1表示已分配，2表示进行中，3表示已完成
+    string duration = 12;   //任务持续时间
+    string surplus = 13;    //任务剩余时间
 }
 
 // 任务分配
 message TaskAssignment {
-    string task_id = 1; // 分配的任务 ID
-    string drone_id = 2; // 分配的无人机 ID
-    int32 priority = 3; // 任务优先级
-    string target = 4;  // 目标位置
-    map<string, float> cost = 5; // 资源消耗速率
+    int32 task_id = 1; // 分配的任务 ID
+    string uav_uid = 2; // 分配的无人机 uid
 }
 
 //任务发送请求
