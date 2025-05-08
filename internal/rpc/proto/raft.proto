@@ -19,6 +19,25 @@ message UAVInfo {
   CPUInfo cpu = 7;
   MemoryInfo memory = 8;
   NetWorkInfo network = 9;
+  repeated Task tasks = 10;   //当前这正负载所有无人机的信息
+  string status = 11;
+}
+
+//任务信息
+message Task {
+  int32 task_id = 1;           //任务ID
+  string type = 2;             //任务类型，分为abcd四种，a为电量密集型，b为计算密集型，c表示内存密集型，d表示同意网络密集型
+  int32 priority = 3;          //任务优先级
+  float required_cpu = 4;      // 任务执行所需的最低CPU能力
+  float cpu_usage = 5;         //任务执行cpu占比
+  float required_memory = 6;   // 任务执行所需的最低内存
+  map<string, float> cost = 7; // 资源消耗速率（每秒消耗电量）
+  Position target = 8;         // 目标位置（格式："x,y,z"）
+  repeated int32 task_parents = 9;
+  repeated int32 task_children = 10;
+  string status = 11;          //任务状态0表示未开始，1表示已分配，2表示进行中，3表示已完成
+  string duration = 12;   //任务持续时间
+  string surplus = 13;    //任务剩余时间
 }
 
 // 位置信息
@@ -94,10 +113,19 @@ message VoteResp {
   bool vote_granted = 3;
 }
 
+message GlobalLoadBalanceReq {
+  repeated Task task_list = 1;
+}
+
+message GlobalLoadBalanceResp {
+  string code = 1;
+}
+
 service RaftService {
   rpc SendUAVInfo(SendUAVInfoReq) returns(SendUAVInfoResp);
   rpc AppendLog(AppendLogReq) returns(AppendLogResp);
   rpc Vote(VoteReq) returns(VoteResp);
+  rpc GlobalLoadBalance(GlobalLoadBalanceReq) returns(GlobalLoadBalanceResp);
 }
 
 

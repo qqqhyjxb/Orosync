@@ -4,9 +4,11 @@ import (
 	"Orosync/internal/client"
 	"Orosync/internal/model"
 	"Orosync/internal/raft"
+	r "Orosync/internal/rpc/pb/raft"
 	"Orosync/internal/rpc/pb/simulation"
 	"context"
 	"fmt"
+	"github.com/jinzhu/copier"
 	"sort"
 )
 
@@ -68,7 +70,7 @@ func (b *BalanceHelper) OffloadMemoryTask() ([]model.TaskInfo, []model.TaskInfo)
 		sortedTasks = append(sortedTasks, t)
 	}
 
-	// 按 MemoryUsage 从大到小排序
+	// 按 RequireMemory 从大到小排序
 	sort.Slice(sortedTasks, func(i, j int) bool {
 		return sortedTasks[i].RequireMemory > sortedTasks[j].RequireMemory
 	})
@@ -106,7 +108,7 @@ func (b *BalanceHelper) OffloadMemoryTask() ([]model.TaskInfo, []model.TaskInfo)
 func (b *BalanceHelper) LocalLoadBalanceForCPU(tasks []model.TaskInfo) {
 	var taskAssignmentList []*simulation.TaskAssignment
 
-	failTasks := make([]model.TaskInfo, len(tasks))
+	failTasks := make([]*r.Task, len(tasks))
 
 	for _, t := range tasks {
 		for _, u := range raft.GlobalNode.LocalGroup.UidList {
@@ -121,7 +123,15 @@ func (b *BalanceHelper) LocalLoadBalanceForCPU(tasks []model.TaskInfo) {
 				fmt.Printf("uav:%s is not exist", u)
 			}
 		}
-		failTasks = append(failTasks, t)
+
+		task := &r.Task{}
+
+		err := copier.Copy(task, t)
+		if err != nil {
+			return
+		}
+
+		failTasks = append(failTasks, task)
 	}
 
 	// 给仿真平台发送再分配结果
@@ -129,27 +139,41 @@ func (b *BalanceHelper) LocalLoadBalanceForCPU(tasks []model.TaskInfo) {
 		Results: taskAssignmentList,
 	}
 
-	clientObj, err := client.GlobalSimulationClient.StartClient(
+	simulationClientObj, err := client.GlobalSimulationClient.StartClient(
 		raft.GlobalNode.SimulationAddress,
 	)
 	if err != nil {
 		fmt.Printf("连接失败: %v\n", err)
 	}
 
-	resp, err := clientObj.Client.TaskAssignment(context.Background(), req)
+	resp, err := simulationClientObj.Client.TaskAssignment(context.Background(), req)
 	if err != nil || !resp.Success {
 		fmt.Printf("LocalLoadBalanceForCPU failed: %v\n", err)
 	}
 
 	// 给leader发送需要全局再分配的任务
-	// TODO: 给leader发送需要全局再分配的任务
+	raftClientObj, err := client.GlobalRaftClient.StartClient(
+		raft.GlobalNode.Logs.UavMap[raft.GlobalNode.LeaderUid].Uid,
+	)
+	if err != nil {
+		fmt.Printf("连接失败: %v\n", err)
+	}
+
+	request := &r.GlobalLoadBalanceReq{
+		TaskList: failTasks,
+	}
+
+	response, err := raftClientObj.Client.GlobalLoadBalance(context.Background(), request)
+	if err != nil || response.Code != raft.SuccessCode {
+		fmt.Printf("LocalLoadBalanceForCPU failed: %v\n", err)
+	}
 }
 
 // LocalLoadBalanceForMemory Memory局部失衡先局部负载均衡
 func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
 	var taskAssignmentList []*simulation.TaskAssignment
 
-	failTasks := make([]model.TaskInfo, len(tasks))
+	failTasks := make([]*r.Task, len(tasks))
 
 	for _, t := range tasks {
 		for _, u := range raft.GlobalNode.LocalGroup.UidList {
@@ -164,7 +188,14 @@ func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
 				fmt.Printf("uav:%s is not exist", u)
 			}
 		}
-		failTasks = append(failTasks, t)
+		task := &r.Task{}
+
+		err := copier.Copy(task, t)
+		if err != nil {
+			return
+		}
+
+		failTasks = append(failTasks, task)
 	}
 
 	// 给仿真平台发送再分配结果
@@ -185,5 +216,19 @@ func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
 	}
 
 	// 给leader发送需要全局再分配的任务
-	// TODO: 给leader发送需要全局再分配的任务
+	raftClientObj, err := client.GlobalRaftClient.StartClient(
+		raft.GlobalNode.Logs.UavMap[raft.GlobalNode.LeaderUid].Uid,
+	)
+	if err != nil {
+		fmt.Printf("连接失败: %v\n", err)
+	}
+
+	request := &r.GlobalLoadBalanceReq{
+		TaskList: failTasks,
+	}
+
+	response, err := raftClientObj.Client.GlobalLoadBalance(context.Background(), request)
+	if err != nil || response.Code != raft.SuccessCode {
+		fmt.Printf("LocalLoadBalanceForCPU failed: %v\n", err)
+	}
 }
