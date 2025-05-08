@@ -61,6 +61,9 @@ type Node struct {
 	CpuUsageThreshold float32 //越大越靠近阈值
 	MemoryThreshold   float32 //越小越靠近阈值
 	DistanceThreshold float32 //越大越靠近阈值
+
+	//
+	SimulationAddress string
 }
 
 type GroupInfo struct {

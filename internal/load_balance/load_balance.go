@@ -1,11 +1,12 @@
 package load_balance
 
 import (
+	"Orosync/internal/client"
 	"Orosync/internal/model"
 	"Orosync/internal/raft"
 	"Orosync/internal/rpc/pb/simulation"
+	"context"
 	"fmt"
-	"github.com/jinzhu/copier"
 	"sort"
 )
 
@@ -13,60 +14,92 @@ type BalanceHelper struct{}
 
 var GlobalBalance *BalanceHelper
 
-func InitGlobalBalance() {
+func init() {
 	GlobalBalance = &BalanceHelper{}
 }
 
-// OffloadCpuTask 卸载cpu型任务
-func (b *BalanceHelper) OffloadCpuTask() {
-	var newTasks []model.TaskInfo
-
+// OffloadCpuTask 卸载 CPU 型任务，返回 (被卸载的任务列表, 保留的任务列表)
+func (b *BalanceHelper) OffloadCpuTask() ([]model.TaskInfo, []model.TaskInfo) {
+	// 复制原始任务列表（避免直接操作原始数据）
+	var sortedTasks []model.TaskInfo
 	for _, t := range raft.GlobalNode.UAV.Tasks {
-		newTasks = append(newTasks, t)
+		sortedTasks = append(sortedTasks, t)
 	}
 
-	// 使用 sort.Slice 直接排序
-	sort.Slice(newTasks, func(i, j int) bool {
-		return newTasks[i].CpuUsage > newTasks[j].CpuUsage
+	// 按 CpuUsage 从大到小排序
+	sort.Slice(sortedTasks, func(i, j int) bool {
+		return sortedTasks[i].CpuUsage > sortedTasks[j].CpuUsage
 	})
 
-	uav := &model.UAV{}
+	// 初始化当前 CPU 使用率和卸载列表
+	currentUsage := raft.GlobalNode.UAV.CPU.UsageRate
+	var offloadedTasks []model.TaskInfo
 
-	err := copier.Copy(uav, raft.GlobalNode.UAV)
-	if err != nil {
-		return
+	// 遍历排序后的任务，依次尝试卸载
+	for _, task := range sortedTasks {
+		if currentUsage <= raft.GlobalNode.CpuUsageThreshold {
+			break // 已达阈值，停止卸载
+		}
+		currentUsage -= task.CpuUsage
+		offloadedTasks = append(offloadedTasks, task)
 	}
 
-	for _, t := range newTasks {
-		uav.CPU.UsageRate = uav.CPU.UsageRate - t.CpuUsage
-		//TODO
+	// 构建保留任务列表（排除已卸载的任务）
+	offloadedIDs := make(map[int32]struct{})
+	for _, t := range offloadedTasks {
+		offloadedIDs[t.TaskId] = struct{}{}
 	}
+
+	var remainingTasks []model.TaskInfo
+	for _, t := range raft.GlobalNode.UAV.Tasks {
+		if _, ok := offloadedIDs[t.TaskId]; !ok {
+			remainingTasks = append(remainingTasks, t)
+		}
+	}
+
+	return offloadedTasks, remainingTasks
 }
 
-// OffloadMemoryTask 卸载memory型任务
-func (b *BalanceHelper) OffloadMemoryTask() {
-	var newTasks []model.TaskInfo
-
+// OffloadMemoryTask 卸载 Memory 型任务，返回 (被卸载的任务列表, 保留的任务列表)
+func (b *BalanceHelper) OffloadMemoryTask() ([]model.TaskInfo, []model.TaskInfo) {
+	// 复制原始任务列表（避免直接操作原始数据）
+	var sortedTasks []model.TaskInfo
 	for _, t := range raft.GlobalNode.UAV.Tasks {
-		newTasks = append(newTasks, t)
+		sortedTasks = append(sortedTasks, t)
 	}
 
-	// 使用 sort.Slice 直接排序
-	sort.Slice(newTasks, func(i, j int) bool {
-		return newTasks[i].CpuUsage > newTasks[j].CpuUsage
+	// 按 MemoryUsage 从大到小排序
+	sort.Slice(sortedTasks, func(i, j int) bool {
+		return sortedTasks[i].RequireMemory > sortedTasks[j].RequireMemory
 	})
 
-	uav := &model.UAV{}
+	// 初始化当前 Memory 和卸载列表
+	currentMemory := raft.GlobalNode.UAV.Memory.UsageRate
+	var offloadedTasks []model.TaskInfo
 
-	err := copier.Copy(uav, raft.GlobalNode.UAV)
-	if err != nil {
-		return
+	// 遍历排序后的任务，依次尝试卸载
+	for _, task := range sortedTasks {
+		if currentMemory >= raft.GlobalNode.MemoryThreshold {
+			break // 已达阈值，停止卸载
+		}
+		currentMemory += task.RequireMemory
+		offloadedTasks = append(offloadedTasks, task)
 	}
 
-	for _, t := range newTasks {
-		uav.CPU.UsageRate = uav.CPU.UsageRate - t.CpuUsage
-		//TODO
+	// 构建保留任务列表（排除已卸载的任务）
+	offloadedIDs := make(map[int32]struct{})
+	for _, t := range offloadedTasks {
+		offloadedIDs[t.TaskId] = struct{}{}
 	}
+
+	var remainingTasks []model.TaskInfo
+	for _, t := range raft.GlobalNode.UAV.Tasks {
+		if _, ok := offloadedIDs[t.TaskId]; !ok {
+			remainingTasks = append(remainingTasks, t)
+		}
+	}
+
+	return offloadedTasks, remainingTasks
 }
 
 // LocalLoadBalanceForCPU CPU局部失衡先局部负载均衡
@@ -91,17 +124,30 @@ func (b *BalanceHelper) LocalLoadBalanceForCPU(tasks []model.TaskInfo) {
 		failTasks = append(failTasks, t)
 	}
 
-	// 发送最新的局部分配结果
-	req := simulation.TaskAssignmentRequest{
+	// 给仿真平台发送再分配结果
+	req := &simulation.TaskAssignmentRequest{
 		Results: taskAssignmentList,
 	}
 
-	// 获取客户端连接（自动复用）
+	clientObj, err := client.GlobalSimulationClient.StartClient(
+		raft.GlobalNode.SimulationAddress,
+	)
+	if err != nil {
+		fmt.Printf("连接失败: %v\n", err)
+	}
+
+	resp, err := clientObj.Client.TaskAssignment(context.Background(), req)
+	if err != nil || !resp.Success {
+		fmt.Printf("LocalLoadBalanceForCPU failed: %v\n", err)
+	}
+
+	// 给leader发送需要全局再分配的任务
+	// TODO: 给leader发送需要全局再分配的任务
 }
 
 // LocalLoadBalanceForMemory Memory局部失衡先局部负载均衡
 func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
-	var taskAssignmentList []simulation.TaskAssignment
+	var taskAssignmentList []*simulation.TaskAssignment
 
 	failTasks := make([]model.TaskInfo, len(tasks))
 
@@ -109,7 +155,7 @@ func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
 		for _, u := range raft.GlobalNode.LocalGroup.UidList {
 			if v, ok := raft.GlobalNode.Logs.UavMap[u]; ok {
 				if v.Memory.SurplusCapacity-t.RequireMemory > raft.GlobalNode.MemoryThreshold {
-					taskAssignmentList = append(taskAssignmentList, simulation.TaskAssignment{
+					taskAssignmentList = append(taskAssignmentList, &simulation.TaskAssignment{
 						TaskId: t.TaskId,
 						UavUid: v.Uid,
 					})
@@ -120,4 +166,24 @@ func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
 		}
 		failTasks = append(failTasks, t)
 	}
+
+	// 给仿真平台发送再分配结果
+	req := &simulation.TaskAssignmentRequest{
+		Results: taskAssignmentList,
+	}
+
+	clientObj, err := client.GlobalSimulationClient.StartClient(
+		raft.GlobalNode.SimulationAddress,
+	)
+	if err != nil {
+		fmt.Printf("连接失败: %v\n", err)
+	}
+
+	resp, err := clientObj.Client.TaskAssignment(context.Background(), req)
+	if err != nil || !resp.Success {
+		fmt.Printf("LocalLoadBalanceForCPU failed: %v\n", err)
+	}
+
+	// 给leader发送需要全局再分配的任务
+	// TODO: 给leader发送需要全局再分配的任务
 }
