@@ -232,3 +232,8 @@ func (b *BalanceHelper) LocalLoadBalanceForMemory(tasks []model.TaskInfo) {
 		fmt.Printf("LocalLoadBalanceForCPU failed: %v\n", err)
 	}
 }
+
+func (b *BalanceHelper) GlobalLoadBalance(tasks []model.TaskInfo) error {
+
+	return nil
+}
