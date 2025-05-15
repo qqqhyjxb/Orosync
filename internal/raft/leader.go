@@ -2,6 +2,7 @@ package raft
 
 import (
 	"Orosync/internal/client"
+	"Orosync/internal/model"
 	"Orosync/internal/rpc/pb/raft"
 	"Orosync/internal/rpc/pb/simulation"
 	"context"
@@ -108,7 +109,7 @@ func (l *LeaderInstance) ReceiveLogFromEachUAV(ctx context.Context, req *raft.Se
 
 	resp := &raft.SendUAVInfoResp{}
 
-	// TODO:目前的方案是直接更新在logs中，然后下一次追加日志给各无人机也直接发logs就行
+	// 目前的方案是直接更新在logs中，然后下一次追加日志给各无人机也直接发logs就行
 
 	// 存在该无人机才赋值
 	if v, ok := GlobalNode.Logs.UavMap[req.Uav.Uid]; ok {
@@ -129,36 +130,34 @@ func (l *LeaderInstance) DroneSwarmChange(ctx context.Context,
 
 	resp := &simulation.DroneSwarmChangeResponse{}
 
-	//if GlobalLeader.Status == StopStatus {
-	//	resp.Code = NotLeaderCode
-	//	resp.Msg = "uav is not leader"
-	//	return resp, nil
-	//}
-	//
-	//if req.ChangeType == AddUAV {
-	//	for _, u := range req.DroneUidList {
-	//		GlobalNode.Cluster.UidList = append(GlobalNode.Cluster.UidList, u)
-	//	}
-	//} else if req.ChangeType == RemoveUAV {
-	//	var newUidList []string
-	//	var removeUidMap map[string]bool
-	//
-	//	for _, u := range req.DroneUidList {
-	//		removeUidMap[u] = true
-	//	}
-	//
-	//	for _, u := range GlobalNode.Cluster.UidList {
-	//		if removeUidMap[u] {
-	//			continue
-	//		}
-	//		newUidList = append(newUidList, u)
-	//	}
-	//
-	//	GlobalNode.Cluster.UidList = newUidList
-	//} else {
-	//	resp.Code = FailCode
-	//	resp.Msg = "wrong change type"
-	//}
+	if GlobalNode.Role != Leader {
+		resp.Code = NotLeaderCode
+		resp.Msg = "uav is not leader"
+		resp.Port = GlobalNode.Logs.UavMap[GlobalNode.LeaderUid].Address
+		return resp, nil
+	}
+
+	if req.ChangeType == AddUAV {
+		for _, u := range req.DroneList {
+			uav := &model.UAV{}
+
+			err := copier.Copy(uav, u)
+			if err != nil {
+				return nil, err
+			}
+
+			GlobalNode.Logs.UavMap[u.Uid] = uav
+		}
+	} else if req.ChangeType == RemoveUAV {
+		for _, u := range req.DroneList {
+			delete(GlobalNode.Logs.UavMap, u.Uid)
+		}
+	} else {
+		resp.Code = FailCode
+		resp.Msg = "illegal change type"
+		resp.Port = GlobalNode.Logs.UavMap[GlobalNode.LeaderUid].Address
+		return resp, nil
+	}
 
 	return resp, nil
 }

@@ -14,7 +14,7 @@ func InitRaft(uav *model.UAV, logs *LogsInfo) {
 }
 
 func (n *Node) Start() {
-	time.Sleep(10 * time.Second)
+	time.Sleep(20 * time.Second)
 
 	//fmt.Println(n.UAV.Uid)
 	//fmt.Println(n.UAV.Address)

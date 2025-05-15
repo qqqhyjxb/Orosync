@@ -15,8 +15,10 @@ const (
 	StartStatus = "start"
 	StopStatus  = "stop"
 
-	SleepTime     = 400
-	AppendLogTime = 100
+	SleepTime       = 400
+	AppendLogTime   = 100
+	BackoffSlotTime = 100
+	BackoffMaxTime  = 2000
 
 	SuccessCode = "0"
 
