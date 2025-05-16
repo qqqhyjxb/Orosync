@@ -42,6 +42,7 @@ protoc --go_out=./internal/rpc/pb   \
 ./internal/rpc/proto/simulation.proto
 ```
 
+### 杀死进程
 ```shell
 lsof -i :40000 | awk '/LISTEN/ {print $2}' | xargs -r sudo kill -9
 ```
