@@ -1,8 +1,12 @@
 package monitor
 
 import (
+	"Orosync/internal/raft"
 	"fmt"
+	"time"
 )
+
+var GlobalTriggerMechanism *TriggerMechanism
 
 // TriggerMechanism 触发机制结构体
 type TriggerMechanism struct {
@@ -15,8 +19,8 @@ type TriggerMechanism struct {
 }
 
 // InitTriggerMechanism 初始化触发机制
-func InitTriggerMechanism(weights []float64, thresholds []float64, scoreThreshold float64, lagCount int) *TriggerMechanism {
-	return &TriggerMechanism{
+func InitTriggerMechanism(weights []float64, thresholds []float64, scoreThreshold float64, lagCount int) {
+	GlobalTriggerMechanism = &TriggerMechanism{
 		Thresholds:     thresholds,
 		Weights:        weights,
 		ScoreThreshold: scoreThreshold,
@@ -28,15 +32,24 @@ func InitTriggerMechanism(weights []float64, thresholds []float64, scoreThreshol
 // CalculateCompositeScore 计算综合评分
 func (t *TriggerMechanism) CalculateCompositeScore(metrics []float64) float64 {
 	var score float64
-	for i, metric := range metrics {
-		score += metric * t.Weights[i]
-	}
+
+	score += GlobalZScoreCalculator.CalculateBatteryZScore(metrics[0]) * t.Weights[0]
+	score += GlobalZScoreCalculator.CalculateCPUZScore(metrics[1]) * t.Weights[1]
+	score += GlobalZScoreCalculator.CalculateMemoryZScore(metrics[2]) * t.Weights[2]
+	score += GlobalZScoreCalculator.CalculateNetworkDelayZScore(metrics[3]) * t.Weights[3]
+	score += GlobalZScoreCalculator.CalculateDistanceZScore(metrics[4]) * t.Weights[4]
+
 	return score
 }
 
 // LevelOneTrigger 第一级触发机制（单指标触发）
 func (t *TriggerMechanism) LevelOneTrigger(metrics []float64) bool {
 	for i, metric := range metrics {
+		// 电量： 1 - 当前电量
+		if i == 0 {
+			metric = 1 - metric
+		}
+
 		if metric >= t.Thresholds[i] {
 			fmt.Printf("Level One Trigger: Indicator %d exceeded threshold (%.2f >= %.2f)\n", i+1, metric, t.Thresholds[i])
 			return true
@@ -71,55 +84,36 @@ func (t *TriggerMechanism) CheckLagPeriod() bool {
 }
 
 // EvaluateTrigger 执行触发判定
-func (t *TriggerMechanism) EvaluateTrigger(metrics []float64) bool {
-	// 检查第一级触发
-	levelOneTriggered := t.LevelOneTrigger(metrics)
+func (t *TriggerMechanism) EvaluateTrigger() {
+	for {
+		// 每300毫秒触发一次检查
+		time.Sleep(300 * time.Millisecond)
 
-	// 检查第二级触发
-	levelTwoTriggered := t.LevelTwoTrigger(metrics)
+		var metrics []float64
+		metrics = append(metrics, float64(raft.GlobalNode.UAV.Battery.Capacity))
+		metrics = append(metrics, float64(raft.GlobalNode.UAV.CPU.UsageRate))
+		metrics = append(metrics, float64(raft.GlobalNode.UAV.Memory.UsageRate))
+		metrics = append(metrics, float64(raft.GlobalNode.UAV.Network.Delay))
+		metrics = append(metrics, float64(0))
 
-	// 如果任何一级触发，则更新历史并检查滞后区间
-	if levelOneTriggered || levelTwoTriggered {
-		t.TriggerHistory = append(t.TriggerHistory[1:], true) // 记录当前触发
-		if t.CheckLagPeriod() {
-			fmt.Println("Lag Period Trigger: Executing rebalancing task due to consecutive triggers.")
-			return true
+		// 检查第一级触发
+		levelOneTriggered := t.LevelOneTrigger(metrics)
+
+		// 检查第二级触发
+		levelTwoTriggered := t.LevelTwoTrigger(metrics)
+
+		// 如果任何一级触发，则更新历史并检查滞后区间
+		if levelOneTriggered || levelTwoTriggered {
+			t.TriggerHistory = append(t.TriggerHistory[1:], true) // 记录当前触发
+			if t.CheckLagPeriod() {
+				fmt.Println("Lag Period Trigger: Executing rebalancing task due to consecutive triggers.")
+				// TODO：触发负载均衡
+			}
+		} else {
+			// 如果没有触发，更新历史状态
+			t.TriggerHistory = append(t.TriggerHistory[1:], false)
 		}
-	} else {
-		// 如果没有触发，更新历史状态
-		t.TriggerHistory = append(t.TriggerHistory[1:], false)
+
+		// 该轮次检查没有触发负载均衡
 	}
-
-	// 返回是否触发
-	return false
-}
-
-// MonitorAndTrigger 模拟主程序，调用触发机制进行判断
-func (a *APH) MonitorAndTrigger(metrics []float64) {
-	weights, err := a.CalculateWeights()
-	if err != nil {
-		fmt.Printf("Error calculating weights: %v\n", err)
-	}
-
-	// 初始化触发机制，滞后区间设置为3次连续触发
-	triggerMechanism := InitTriggerMechanism(weights, []float64{0.8, 0.75, 0.7, 0.65, 0.9}, 0.8, 3)
-
-	// 每次调用时监测指标
-	if triggerMechanism.EvaluateTrigger(metrics) {
-		fmt.Println("Trigger condition met! Execute rebalancing algorithm.")
-	} else {
-		fmt.Println("No trigger, continue monitoring.")
-	}
-}
-
-func main() {
-	// 模拟计算权重
-	aph := &APH{}
-	aph.Init()
-
-	// 模拟传入的指标数据
-	metrics := []float64{0.7, 0.85, 0.6, 0.9, 0.75} // 示例指标值：电量、CPU利用率、内存利用率、网络延迟、偏离距离
-
-	// 监控并根据触发机制决策
-	aph.MonitorAndTrigger(metrics)
 }
