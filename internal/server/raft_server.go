@@ -22,6 +22,6 @@ func (r *RaftService) Vote(ctx context.Context, req *raft2.VoteReq) (*raft2.Vote
 	return raft.GlobalNode.ReceiveVote(ctx, req)
 }
 
-//func (r *RaftService) GlobalLoadBalance(ctx context.Context, req *raft2.GlobalLoadBalanceReq) (*raft2.GlobalLoadBalanceResp, error) {
-//	return raft.GlobalNode.GlobalLoadBalance(ctx, req)
-//}
+func (r *RaftService) GlobalLoadBalance(ctx context.Context, req *raft2.GlobalLoadBalanceReq) (*raft2.GlobalLoadBalanceResp, error) {
+	return raft.GlobalNode.GlobalLoadBalance(ctx, req)
+}

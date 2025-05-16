@@ -225,24 +225,24 @@ func (l *LeaderInstance) UpdateAndPrintLogs() {
 	}
 }
 
-//func (l *LeaderInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
-//	resp := &raft.GlobalLoadBalanceResp{
-//		Code: SuccessCode,
-//	}
-//
-//	var tasks []model.TaskInfo
-//
-//	err := copier.Copy(tasks, req.TaskList)
-//	if err != nil {
-//		resp.Code = FailCode
-//		return resp, err
-//	}
-//
-//	err = load_balance.GlobalBalance.GlobalLoadBalance(tasks)
-//	if err != nil {
-//		resp.Code = FailCode
-//		return resp, err
-//	}
-//
-//	return resp, nil
-//}
+func (l *LeaderInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	resp := &raft.GlobalLoadBalanceResp{
+		Code: SuccessCode,
+	}
+
+	var tasks []model.TaskInfo
+
+	err := copier.Copy(tasks, req.TaskList)
+	if err != nil {
+		resp.Code = FailCode
+		return resp, err
+	}
+
+	err = GlobalBalance.GlobalLoadBalance(tasks)
+	if err != nil {
+		resp.Code = FailCode
+		return resp, err
+	}
+
+	return resp, nil
+}

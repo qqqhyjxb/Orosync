@@ -173,10 +173,10 @@ func (c *CandidateInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogR
 	return resp, nil
 }
 
-//func (c *CandidateInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
-//	resp := &raft.GlobalLoadBalanceResp{
-//		Code: NotLeaderCode,
-//	}
-//
-//	return resp, nil
-//}
+func (c *CandidateInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	resp := &raft.GlobalLoadBalanceResp{
+		Code: NotLeaderCode,
+	}
+
+	return resp, nil
+}

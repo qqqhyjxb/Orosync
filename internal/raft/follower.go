@@ -181,10 +181,10 @@ func (f *FollowerInstance) ReceiveLogFromEachUAV(ctx context.Context, req *raft.
 	return resp, nil
 }
 
-//func (f *FollowerInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
-//	resp := &raft.GlobalLoadBalanceResp{
-//		Code: NotLeaderCode,
-//	}
-//
-//	return resp, nil
-//}
+func (f *FollowerInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	resp := &raft.GlobalLoadBalanceResp{
+		Code: NotLeaderCode,
+	}
+
+	return resp, nil
+}

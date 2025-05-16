@@ -128,15 +128,15 @@ func (n *Node) ReceiveLogFromEachUAV(ctx context.Context, req *raft.SendUAVInfoR
 	}
 }
 
-//func (n *Node) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
-//	switch n.Role {
-//	case Leader:
-//		return GlobalLeader.GlobalLoadBalance(ctx, req)
-//	case Follower:
-//		return GlobalFollower.GlobalLoadBalance(ctx, req)
-//	case Candidate:
-//		return GlobalCandidate.GlobalLoadBalance(ctx, req)
-//	default:
-//		return nil, fmt.Errorf("wrong role")
-//	}
-//}
+func (n *Node) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	switch n.Role {
+	case Leader:
+		return GlobalLeader.GlobalLoadBalance(ctx, req)
+	case Follower:
+		return GlobalFollower.GlobalLoadBalance(ctx, req)
+	case Candidate:
+		return GlobalCandidate.GlobalLoadBalance(ctx, req)
+	default:
+		return nil, fmt.Errorf("wrong role")
+	}
+}
