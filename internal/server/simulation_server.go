@@ -1,6 +1,7 @@
 package server
 
 import (
+	"Orosync/internal/monitor"
 	"Orosync/internal/raft"
 	"Orosync/internal/rpc/pb/simulation"
 	"context"
@@ -27,6 +28,14 @@ func (s *SimulationService) DroneStatus(ctx context.Context,
 	}
 
 	fmt.Printf("监听到的无人机状态:%v\n", raft.GlobalNode.UAV)
+
+	// 更新uav数据的历史值
+	monitor.GlobalZScoreCalculator.UpdateBatteryHistoryData(float64(raft.GlobalNode.UAV.Battery.Capacity))
+	monitor.GlobalZScoreCalculator.UpdateCPUHistoryData(float64(raft.GlobalNode.UAV.CPU.UsageRate))
+	monitor.GlobalZScoreCalculator.UpdateMemoryHistoryData(float64(raft.GlobalNode.UAV.Memory.UsageRate))
+	monitor.GlobalZScoreCalculator.UpdateNetworkDelayHistoryData(float64(raft.GlobalNode.UAV.Network.Delay))
+	// TODO：暂无实际任务，偏离距离为0
+	monitor.GlobalZScoreCalculator.UpdateBatteryHistoryData(float64(0))
 
 	resp.Code = raft.SuccessCode
 	resp.Msg = "success"
