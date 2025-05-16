@@ -58,7 +58,7 @@ message NetWorkInfo {
 
 message DroneSwarmChangeRequest{
     int32 change_type = 1; // 1: 添加无人机 2：删除无人机
-    repeated string drone_uid_list = 2; // 变更的无人机的uid，添加时填入新无人机的uid，删除时填入要删除的无人机的uid
+    repeated DroneStatusRequest drone_list = 2; // 变更的无人机的uid，添加时填入新无人机的uid，删除时填入要删除的无人机的uid
 }
 
 message DroneSwarmChangeResponse{

@@ -27,7 +27,7 @@ func InitGlobalFollower() {
 func (f *FollowerInstance) Start() {
 	f.Status = StartStatus
 	GlobalNode.Role = Follower
-	GlobalNode.IsVoted = false
+	GlobalNode.LastVoteTerm = -1 //新启动的Follower投票重置
 
 	fmt.Printf("new follower: %v\n", GlobalNode.UAV.Uid)
 
@@ -135,13 +135,21 @@ func (f *FollowerInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogRe
 	resp.LeaderUid = GlobalNode.LeaderUid
 
 	// 更新为未投票状态
-	GlobalNode.IsVoted = false
+	GlobalNode.LastVoteTerm = req.Term
 
 	return resp, nil
 }
 
 func (f *FollowerInstance) ReceiveVote(ctx context.Context, req *raft.VoteReq) (*raft.VoteResp, error) {
 	resp := &raft.VoteResp{}
+
+	// 若请求投票的Candidate日志版本小于当前Follower的日志版本，拒绝投票
+	if req.LastLogIndex < GlobalNode.LastLogIndex {
+		resp.Term = GlobalNode.Term
+		resp.LeaderUid = GlobalNode.LeaderUid
+		resp.VoteGranted = false
+		return resp, nil
+	}
 
 	// 若请求投票的candidate任期比当前小，说明当前任期已经过期
 	// 拒绝投票，并告诉candidate新leader的信息
@@ -152,15 +160,15 @@ func (f *FollowerInstance) ReceiveVote(ctx context.Context, req *raft.VoteReq) (
 		return resp, nil
 	}
 
-	// 已经投过票了，拒绝投票
-	if GlobalNode.IsVoted {
+	//如果该轮任期内投过票了，拒绝投票
+	if GlobalNode.LastVoteTerm >= req.Term {
 		resp.VoteGranted = false
 		return resp, nil
 	}
 
 	// 同意投票
 	resp.VoteGranted = true
-	GlobalNode.IsVoted = true
+	GlobalNode.LastVoteTerm = req.Term
 	return resp, nil
 }
 
@@ -168,6 +176,14 @@ func (f *FollowerInstance) ReceiveLogFromEachUAV(ctx context.Context, req *raft.
 	resp := &raft.SendUAVInfoResp{
 		Code:      NotLeaderCode,
 		LeaderUid: GlobalNode.LeaderUid,
+	}
+
+	return resp, nil
+}
+
+func (f *FollowerInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	resp := &raft.GlobalLoadBalanceResp{
+		Code: NotLeaderCode,
 	}
 
 	return resp, nil

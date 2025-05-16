@@ -47,8 +47,7 @@ func main() {
 	raft.InitRaft(uav, cfg.Logs)
 
 	// 4. 初始化监控系统
-	monitor.InitGlobalAPH()
-	monitor.GlobalAPH.Init()
+	monitor.InitMonitor()
 
 	// 5. 启动 Raft 在一个 goroutine 中
 	go func() {

@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RaftService_SendUAVInfo_FullMethodName = "/raft.RaftService/SendUAVInfo"
-	RaftService_AppendLog_FullMethodName   = "/raft.RaftService/AppendLog"
-	RaftService_Vote_FullMethodName        = "/raft.RaftService/Vote"
+	RaftService_SendUAVInfo_FullMethodName       = "/raft.RaftService/SendUAVInfo"
+	RaftService_AppendLog_FullMethodName         = "/raft.RaftService/AppendLog"
+	RaftService_Vote_FullMethodName              = "/raft.RaftService/Vote"
+	RaftService_GlobalLoadBalance_FullMethodName = "/raft.RaftService/GlobalLoadBalance"
 )
 
 // RaftServiceClient is the client API for RaftService service.
@@ -31,6 +32,7 @@ type RaftServiceClient interface {
 	SendUAVInfo(ctx context.Context, in *SendUAVInfoReq, opts ...grpc.CallOption) (*SendUAVInfoResp, error)
 	AppendLog(ctx context.Context, in *AppendLogReq, opts ...grpc.CallOption) (*AppendLogResp, error)
 	Vote(ctx context.Context, in *VoteReq, opts ...grpc.CallOption) (*VoteResp, error)
+	GlobalLoadBalance(ctx context.Context, in *GlobalLoadBalanceReq, opts ...grpc.CallOption) (*GlobalLoadBalanceResp, error)
 }
 
 type raftServiceClient struct {
@@ -71,6 +73,16 @@ func (c *raftServiceClient) Vote(ctx context.Context, in *VoteReq, opts ...grpc.
 	return out, nil
 }
 
+func (c *raftServiceClient) GlobalLoadBalance(ctx context.Context, in *GlobalLoadBalanceReq, opts ...grpc.CallOption) (*GlobalLoadBalanceResp, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GlobalLoadBalanceResp)
+	err := c.cc.Invoke(ctx, RaftService_GlobalLoadBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RaftServiceServer is the server API for RaftService service.
 // All implementations must embed UnimplementedRaftServiceServer
 // for forward compatibility.
@@ -78,6 +90,7 @@ type RaftServiceServer interface {
 	SendUAVInfo(context.Context, *SendUAVInfoReq) (*SendUAVInfoResp, error)
 	AppendLog(context.Context, *AppendLogReq) (*AppendLogResp, error)
 	Vote(context.Context, *VoteReq) (*VoteResp, error)
+	GlobalLoadBalance(context.Context, *GlobalLoadBalanceReq) (*GlobalLoadBalanceResp, error)
 	mustEmbedUnimplementedRaftServiceServer()
 }
 
@@ -96,6 +109,9 @@ func (UnimplementedRaftServiceServer) AppendLog(context.Context, *AppendLogReq) 
 }
 func (UnimplementedRaftServiceServer) Vote(context.Context, *VoteReq) (*VoteResp, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Vote not implemented")
+}
+func (UnimplementedRaftServiceServer) GlobalLoadBalance(context.Context, *GlobalLoadBalanceReq) (*GlobalLoadBalanceResp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GlobalLoadBalance not implemented")
 }
 func (UnimplementedRaftServiceServer) mustEmbedUnimplementedRaftServiceServer() {}
 func (UnimplementedRaftServiceServer) testEmbeddedByValue()                     {}
@@ -172,6 +188,24 @@ func _RaftService_Vote_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RaftService_GlobalLoadBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GlobalLoadBalanceReq)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RaftServiceServer).GlobalLoadBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RaftService_GlobalLoadBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RaftServiceServer).GlobalLoadBalance(ctx, req.(*GlobalLoadBalanceReq))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RaftService_ServiceDesc is the grpc.ServiceDesc for RaftService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +224,10 @@ var RaftService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Vote",
 			Handler:    _RaftService_Vote_Handler,
+		},
+		{
+			MethodName: "GlobalLoadBalance",
+			Handler:    _RaftService_GlobalLoadBalance_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

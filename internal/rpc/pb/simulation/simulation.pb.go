@@ -482,8 +482,8 @@ func (x *NetWorkInfo) GetDelay() float32 {
 
 type DroneSwarmChangeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	ChangeType    int32                  `protobuf:"varint,1,opt,name=change_type,json=changeType,proto3" json:"change_type,omitempty"`        // 1: 添加无人机 2：删除无人机
-	DroneUidList  []string               `protobuf:"bytes,2,rep,name=drone_uid_list,json=droneUidList,proto3" json:"drone_uid_list,omitempty"` // 变更的无人机的uid，添加时填入新无人机的uid，删除时填入要删除的无人机的uid
+	ChangeType    int32                  `protobuf:"varint,1,opt,name=change_type,json=changeType,proto3" json:"change_type,omitempty"` // 1: 添加无人机 2：删除无人机
+	DroneList     []*DroneStatusRequest  `protobuf:"bytes,2,rep,name=drone_list,json=droneList,proto3" json:"drone_list,omitempty"`     // 变更的无人机的uid，添加时填入新无人机的uid，删除时填入要删除的无人机的uid
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -525,9 +525,9 @@ func (x *DroneSwarmChangeRequest) GetChangeType() int32 {
 	return 0
 }
 
-func (x *DroneSwarmChangeRequest) GetDroneUidList() []string {
+func (x *DroneSwarmChangeRequest) GetDroneList() []*DroneStatusRequest {
 	if x != nil {
-		return x.DroneUidList
+		return x.DroneList
 	}
 	return nil
 }
@@ -1104,11 +1104,12 @@ const file_internal_rpc_proto_simulation_proto_rawDesc = "" +
 	"usage_rate\x18\x03 \x01(\x02R\tusageRate\"A\n" +
 	"\vNetWorkInfo\x12\x1c\n" +
 	"\tbandwidth\x18\x01 \x01(\x02R\tbandwidth\x12\x14\n" +
-	"\x05delay\x18\x02 \x01(\x02R\x05delay\"`\n" +
+	"\x05delay\x18\x02 \x01(\x02R\x05delay\"u\n" +
 	"\x17DroneSwarmChangeRequest\x12\x1f\n" +
 	"\vchange_type\x18\x01 \x01(\x05R\n" +
-	"changeType\x12$\n" +
-	"\x0edrone_uid_list\x18\x02 \x03(\tR\fdroneUidList\"n\n" +
+	"changeType\x129\n" +
+	"\n" +
+	"drone_list\x18\x02 \x03(\v2\x1a.rpc.v1.DroneStatusRequestR\tdroneList\"n\n" +
 	"\x18DroneSwarmChangeResponse\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\x12\x10\n" +
 	"\x03msg\x18\x02 \x01(\tR\x03msg\x12\x18\n" +
@@ -1194,25 +1195,26 @@ var file_internal_rpc_proto_simulation_proto_depIdxs = []int32{
 	5,  // 3: rpc.v1.DroneStatusRequest.memory:type_name -> rpc.v1.MemoryInfo
 	6,  // 4: rpc.v1.DroneStatusRequest.network:type_name -> rpc.v1.NetWorkInfo
 	9,  // 5: rpc.v1.DroneStatusRequest.tasks:type_name -> rpc.v1.Task
-	17, // 6: rpc.v1.Task.cost:type_name -> rpc.v1.Task.CostEntry
-	2,  // 7: rpc.v1.Task.target:type_name -> rpc.v1.Position
-	9,  // 8: rpc.v1.TasksSendRequest.tasks:type_name -> rpc.v1.Task
-	10, // 9: rpc.v1.TaskAssignmentRequest.results:type_name -> rpc.v1.TaskAssignment
-	0,  // 10: rpc.v1.SimulationService.DroneStatus:input_type -> rpc.v1.DroneStatusRequest
-	7,  // 11: rpc.v1.SimulationService.DroneSwarmChange:input_type -> rpc.v1.DroneSwarmChangeRequest
-	11, // 12: rpc.v1.SimulationService.TasksSend:input_type -> rpc.v1.TasksSendRequest
-	13, // 13: rpc.v1.SimulationService.AddTask:input_type -> rpc.v1.AddTaskRequest
-	15, // 14: rpc.v1.SimulationService.TaskAssignment:input_type -> rpc.v1.TaskAssignmentRequest
-	1,  // 15: rpc.v1.SimulationService.DroneStatus:output_type -> rpc.v1.DroneStatusResponse
-	8,  // 16: rpc.v1.SimulationService.DroneSwarmChange:output_type -> rpc.v1.DroneSwarmChangeResponse
-	12, // 17: rpc.v1.SimulationService.TasksSend:output_type -> rpc.v1.TasksSendResponse
-	14, // 18: rpc.v1.SimulationService.AddTask:output_type -> rpc.v1.AddTaskResponse
-	16, // 19: rpc.v1.SimulationService.TaskAssignment:output_type -> rpc.v1.TaskAssignmentResponse
-	15, // [15:20] is the sub-list for method output_type
-	10, // [10:15] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	0,  // 6: rpc.v1.DroneSwarmChangeRequest.drone_list:type_name -> rpc.v1.DroneStatusRequest
+	17, // 7: rpc.v1.Task.cost:type_name -> rpc.v1.Task.CostEntry
+	2,  // 8: rpc.v1.Task.target:type_name -> rpc.v1.Position
+	9,  // 9: rpc.v1.TasksSendRequest.tasks:type_name -> rpc.v1.Task
+	10, // 10: rpc.v1.TaskAssignmentRequest.results:type_name -> rpc.v1.TaskAssignment
+	0,  // 11: rpc.v1.SimulationService.DroneStatus:input_type -> rpc.v1.DroneStatusRequest
+	7,  // 12: rpc.v1.SimulationService.DroneSwarmChange:input_type -> rpc.v1.DroneSwarmChangeRequest
+	11, // 13: rpc.v1.SimulationService.TasksSend:input_type -> rpc.v1.TasksSendRequest
+	13, // 14: rpc.v1.SimulationService.AddTask:input_type -> rpc.v1.AddTaskRequest
+	15, // 15: rpc.v1.SimulationService.TaskAssignment:input_type -> rpc.v1.TaskAssignmentRequest
+	1,  // 16: rpc.v1.SimulationService.DroneStatus:output_type -> rpc.v1.DroneStatusResponse
+	8,  // 17: rpc.v1.SimulationService.DroneSwarmChange:output_type -> rpc.v1.DroneSwarmChangeResponse
+	12, // 18: rpc.v1.SimulationService.TasksSend:output_type -> rpc.v1.TasksSendResponse
+	14, // 19: rpc.v1.SimulationService.AddTask:output_type -> rpc.v1.AddTaskResponse
+	16, // 20: rpc.v1.SimulationService.TaskAssignment:output_type -> rpc.v1.TaskAssignmentResponse
+	16, // [16:21] is the sub-list for method output_type
+	11, // [11:16] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_internal_rpc_proto_simulation_proto_init() }

@@ -15,8 +15,10 @@ const (
 	StartStatus = "start"
 	StopStatus  = "stop"
 
-	SleepTime     = 400
-	AppendLogTime = 100
+	SleepTime       = 400
+	AppendLogTime   = 100
+	BackoffSlotTime = 100
+	BackoffMaxTime  = 2000
 
 	SuccessCode = "0"
 
@@ -44,7 +46,7 @@ type Node struct {
 	PrevLogTerm  int64  // 前一个日志的任期号
 	LeaderCommit int64  // leader已提交的日志号
 	HasHeartbeat bool   // leader有心跳
-	IsVoted      bool   // 是否已经投票
+	LastVoteTerm int64  // 上一次投票的任期
 
 	// log
 	NewLogIndex int64
@@ -121,6 +123,19 @@ func (n *Node) ReceiveLogFromEachUAV(ctx context.Context, req *raft.SendUAVInfoR
 		return GlobalFollower.ReceiveLogFromEachUAV(ctx, req)
 	case Candidate:
 		return GlobalCandidate.ReceiveLogFromEachUAV(ctx, req)
+	default:
+		return nil, fmt.Errorf("wrong role")
+	}
+}
+
+func (n *Node) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	switch n.Role {
+	case Leader:
+		return GlobalLeader.GlobalLoadBalance(ctx, req)
+	case Follower:
+		return GlobalFollower.GlobalLoadBalance(ctx, req)
+	case Candidate:
+		return GlobalCandidate.GlobalLoadBalance(ctx, req)
 	default:
 		return nil, fmt.Errorf("wrong role")
 	}

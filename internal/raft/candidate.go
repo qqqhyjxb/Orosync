@@ -5,6 +5,9 @@ import (
 	"Orosync/internal/rpc/pb/raft"
 	"context"
 	"fmt"
+	"math"
+	"math/rand"
+	"time"
 )
 
 var GlobalCandidate *CandidateInstance
@@ -34,6 +37,8 @@ func (c *CandidateInstance) Stop() {
 }
 
 func (c *CandidateInstance) Vote(ctx context.Context) {
+	retries := 0 // 当前的重试次数（n）
+
 	for GlobalNode.Role == Candidate {
 
 		var voteCount int64
@@ -105,6 +110,20 @@ func (c *CandidateInstance) Vote(ctx context.Context) {
 		}
 
 		fmt.Printf("fail to candidate: %v  voteCount: %v\n", GlobalNode.UAV.Uid, voteCount)
+
+		// 增加指数退避算法
+		randFactor := rand.Float64() // 随机生成一个 [0, 1) 区间内的浮动值
+
+		// 计算退避时间：Rand(0,1) * 2^n * BackoffSlotTime
+		backoffTime := randFactor * math.Pow(2, float64(retries)) * float64(BackoffSlotTime)
+
+		// 确保退避时间不会超过最大退避时间
+		backoffTime = math.Min(backoffTime, float64(BackoffMaxTime))
+
+		// 将退避时间转为 time.Duration 类型（假设单位为毫秒）
+		time.Sleep(time.Duration(backoffTime) * time.Millisecond)
+
+		retries++
 	}
 }
 
@@ -149,6 +168,14 @@ func (c *CandidateInstance) ReceiveLog(ctx context.Context, req *raft.AppendLogR
 		c.Stop()
 
 		go GlobalFollower.Start()
+	}
+
+	return resp, nil
+}
+
+func (c *CandidateInstance) GlobalLoadBalance(ctx context.Context, req *raft.GlobalLoadBalanceReq) (*raft.GlobalLoadBalanceResp, error) {
+	resp := &raft.GlobalLoadBalanceResp{
+		Code: NotLeaderCode,
 	}
 
 	return resp, nil

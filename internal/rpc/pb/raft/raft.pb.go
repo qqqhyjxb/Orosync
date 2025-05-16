@@ -77,6 +77,8 @@ type UAVInfo struct {
 	Cpu           *CPUInfo               `protobuf:"bytes,7,opt,name=cpu,proto3" json:"cpu,omitempty"`
 	Memory        *MemoryInfo            `protobuf:"bytes,8,opt,name=memory,proto3" json:"memory,omitempty"`
 	Network       *NetWorkInfo           `protobuf:"bytes,9,opt,name=network,proto3" json:"network,omitempty"`
+	Tasks         []*Task                `protobuf:"bytes,10,rep,name=tasks,proto3" json:"tasks,omitempty"` //当前这正负载所有无人机的信息
+	Status        string                 `protobuf:"bytes,11,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -174,6 +176,161 @@ func (x *UAVInfo) GetNetwork() *NetWorkInfo {
 	return nil
 }
 
+func (x *UAVInfo) GetTasks() []*Task {
+	if x != nil {
+		return x.Tasks
+	}
+	return nil
+}
+
+func (x *UAVInfo) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+// 任务信息
+type Task struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TaskId         int32                  `protobuf:"varint,1,opt,name=task_id,json=taskId,proto3" json:"task_id,omitempty"`                                                          //任务ID
+	Type           string                 `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`                                                                             //任务类型，分为abcd四种，a为电量密集型，b为计算密集型，c表示内存密集型，d表示同意网络密集型
+	Priority       int32                  `protobuf:"varint,3,opt,name=priority,proto3" json:"priority,omitempty"`                                                                    //任务优先级
+	RequiredCpu    float32                `protobuf:"fixed32,4,opt,name=required_cpu,json=requiredCpu,proto3" json:"required_cpu,omitempty"`                                          // 任务执行所需的最低CPU能力
+	CpuUsage       float32                `protobuf:"fixed32,5,opt,name=cpu_usage,json=cpuUsage,proto3" json:"cpu_usage,omitempty"`                                                   //任务执行cpu占比
+	RequiredMemory float32                `protobuf:"fixed32,6,opt,name=required_memory,json=requiredMemory,proto3" json:"required_memory,omitempty"`                                 // 任务执行所需的最低内存
+	Cost           map[string]float32     `protobuf:"bytes,7,rep,name=cost,proto3" json:"cost,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed32,2,opt,name=value"` // 资源消耗速率（每秒消耗电量）
+	Target         *Position              `protobuf:"bytes,8,opt,name=target,proto3" json:"target,omitempty"`                                                                         // 目标位置（格式："x,y,z"）
+	TaskParents    []int32                `protobuf:"varint,9,rep,packed,name=task_parents,json=taskParents,proto3" json:"task_parents,omitempty"`
+	TaskChildren   []int32                `protobuf:"varint,10,rep,packed,name=task_children,json=taskChildren,proto3" json:"task_children,omitempty"`
+	Status         string                 `protobuf:"bytes,11,opt,name=status,proto3" json:"status,omitempty"`     //任务状态0表示未开始，1表示已分配，2表示进行中，3表示已完成
+	Duration       string                 `protobuf:"bytes,12,opt,name=duration,proto3" json:"duration,omitempty"` //任务持续时间
+	Surplus        string                 `protobuf:"bytes,13,opt,name=surplus,proto3" json:"surplus,omitempty"`   //任务剩余时间
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Task) Reset() {
+	*x = Task{}
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Task) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Task) ProtoMessage() {}
+
+func (x *Task) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Task.ProtoReflect.Descriptor instead.
+func (*Task) Descriptor() ([]byte, []int) {
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Task) GetTaskId() int32 {
+	if x != nil {
+		return x.TaskId
+	}
+	return 0
+}
+
+func (x *Task) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *Task) GetPriority() int32 {
+	if x != nil {
+		return x.Priority
+	}
+	return 0
+}
+
+func (x *Task) GetRequiredCpu() float32 {
+	if x != nil {
+		return x.RequiredCpu
+	}
+	return 0
+}
+
+func (x *Task) GetCpuUsage() float32 {
+	if x != nil {
+		return x.CpuUsage
+	}
+	return 0
+}
+
+func (x *Task) GetRequiredMemory() float32 {
+	if x != nil {
+		return x.RequiredMemory
+	}
+	return 0
+}
+
+func (x *Task) GetCost() map[string]float32 {
+	if x != nil {
+		return x.Cost
+	}
+	return nil
+}
+
+func (x *Task) GetTarget() *Position {
+	if x != nil {
+		return x.Target
+	}
+	return nil
+}
+
+func (x *Task) GetTaskParents() []int32 {
+	if x != nil {
+		return x.TaskParents
+	}
+	return nil
+}
+
+func (x *Task) GetTaskChildren() []int32 {
+	if x != nil {
+		return x.TaskChildren
+	}
+	return nil
+}
+
+func (x *Task) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Task) GetDuration() string {
+	if x != nil {
+		return x.Duration
+	}
+	return ""
+}
+
+func (x *Task) GetSurplus() string {
+	if x != nil {
+		return x.Surplus
+	}
+	return ""
+}
+
 // 位置信息
 type Position struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -186,7 +343,7 @@ type Position struct {
 
 func (x *Position) Reset() {
 	*x = Position{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[2]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -198,7 +355,7 @@ func (x *Position) String() string {
 func (*Position) ProtoMessage() {}
 
 func (x *Position) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[2]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -211,7 +368,7 @@ func (x *Position) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Position.ProtoReflect.Descriptor instead.
 func (*Position) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{2}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Position) GetX() float32 {
@@ -245,7 +402,7 @@ type Battery struct {
 
 func (x *Battery) Reset() {
 	*x = Battery{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[3]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -257,7 +414,7 @@ func (x *Battery) String() string {
 func (*Battery) ProtoMessage() {}
 
 func (x *Battery) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[3]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -270,7 +427,7 @@ func (x *Battery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Battery.ProtoReflect.Descriptor instead.
 func (*Battery) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{3}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Battery) GetCapacity() float32 {
@@ -292,7 +449,7 @@ type CPUInfo struct {
 
 func (x *CPUInfo) Reset() {
 	*x = CPUInfo{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[4]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -304,7 +461,7 @@ func (x *CPUInfo) String() string {
 func (*CPUInfo) ProtoMessage() {}
 
 func (x *CPUInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[4]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -317,7 +474,7 @@ func (x *CPUInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CPUInfo.ProtoReflect.Descriptor instead.
 func (*CPUInfo) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{4}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CPUInfo) GetCapacity() float32 {
@@ -353,7 +510,7 @@ type MemoryInfo struct {
 
 func (x *MemoryInfo) Reset() {
 	*x = MemoryInfo{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[5]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -365,7 +522,7 @@ func (x *MemoryInfo) String() string {
 func (*MemoryInfo) ProtoMessage() {}
 
 func (x *MemoryInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[5]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -378,7 +535,7 @@ func (x *MemoryInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MemoryInfo.ProtoReflect.Descriptor instead.
 func (*MemoryInfo) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{5}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *MemoryInfo) GetCapacity() float32 {
@@ -413,7 +570,7 @@ type NetWorkInfo struct {
 
 func (x *NetWorkInfo) Reset() {
 	*x = NetWorkInfo{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[6]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +582,7 @@ func (x *NetWorkInfo) String() string {
 func (*NetWorkInfo) ProtoMessage() {}
 
 func (x *NetWorkInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[6]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +595,7 @@ func (x *NetWorkInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetWorkInfo.ProtoReflect.Descriptor instead.
 func (*NetWorkInfo) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{6}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *NetWorkInfo) GetBandwidth() float32 {
@@ -465,7 +622,7 @@ type SendUAVInfoResp struct {
 
 func (x *SendUAVInfoResp) Reset() {
 	*x = SendUAVInfoResp{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[7]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -477,7 +634,7 @@ func (x *SendUAVInfoResp) String() string {
 func (*SendUAVInfoResp) ProtoMessage() {}
 
 func (x *SendUAVInfoResp) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[7]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -490,7 +647,7 @@ func (x *SendUAVInfoResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SendUAVInfoResp.ProtoReflect.Descriptor instead.
 func (*SendUAVInfoResp) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{7}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *SendUAVInfoResp) GetCode() string {
@@ -522,7 +679,7 @@ type AppendLogReq struct {
 
 func (x *AppendLogReq) Reset() {
 	*x = AppendLogReq{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[8]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -534,7 +691,7 @@ func (x *AppendLogReq) String() string {
 func (*AppendLogReq) ProtoMessage() {}
 
 func (x *AppendLogReq) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[8]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -547,7 +704,7 @@ func (x *AppendLogReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendLogReq.ProtoReflect.Descriptor instead.
 func (*AppendLogReq) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{8}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *AppendLogReq) GetTerm() int64 {
@@ -604,7 +761,7 @@ type LogsInfo struct {
 
 func (x *LogsInfo) Reset() {
 	*x = LogsInfo{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[9]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -616,7 +773,7 @@ func (x *LogsInfo) String() string {
 func (*LogsInfo) ProtoMessage() {}
 
 func (x *LogsInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[9]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -629,7 +786,7 @@ func (x *LogsInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogsInfo.ProtoReflect.Descriptor instead.
 func (*LogsInfo) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{9}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LogsInfo) GetIndex() int64 {
@@ -671,7 +828,7 @@ type AppendLogResp struct {
 
 func (x *AppendLogResp) Reset() {
 	*x = AppendLogResp{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[10]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -683,7 +840,7 @@ func (x *AppendLogResp) String() string {
 func (*AppendLogResp) ProtoMessage() {}
 
 func (x *AppendLogResp) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[10]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -696,7 +853,7 @@ func (x *AppendLogResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AppendLogResp.ProtoReflect.Descriptor instead.
 func (*AppendLogResp) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{10}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *AppendLogResp) GetCode() string {
@@ -732,7 +889,7 @@ type VoteReq struct {
 
 func (x *VoteReq) Reset() {
 	*x = VoteReq{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[11]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -744,7 +901,7 @@ func (x *VoteReq) String() string {
 func (*VoteReq) ProtoMessage() {}
 
 func (x *VoteReq) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[11]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -757,7 +914,7 @@ func (x *VoteReq) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteReq.ProtoReflect.Descriptor instead.
 func (*VoteReq) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{11}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *VoteReq) GetTerm() int64 {
@@ -799,7 +956,7 @@ type VoteResp struct {
 
 func (x *VoteResp) Reset() {
 	*x = VoteResp{}
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[12]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -811,7 +968,7 @@ func (x *VoteResp) String() string {
 func (*VoteResp) ProtoMessage() {}
 
 func (x *VoteResp) ProtoReflect() protoreflect.Message {
-	mi := &file_internal_rpc_proto_raft_proto_msgTypes[12]
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -824,7 +981,7 @@ func (x *VoteResp) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VoteResp.ProtoReflect.Descriptor instead.
 func (*VoteResp) Descriptor() ([]byte, []int) {
-	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{12}
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *VoteResp) GetTerm() int64 {
@@ -848,13 +1005,101 @@ func (x *VoteResp) GetVoteGranted() bool {
 	return false
 }
 
+type GlobalLoadBalanceReq struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TaskList      []*Task                `protobuf:"bytes,1,rep,name=task_list,json=taskList,proto3" json:"task_list,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GlobalLoadBalanceReq) Reset() {
+	*x = GlobalLoadBalanceReq{}
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GlobalLoadBalanceReq) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GlobalLoadBalanceReq) ProtoMessage() {}
+
+func (x *GlobalLoadBalanceReq) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GlobalLoadBalanceReq.ProtoReflect.Descriptor instead.
+func (*GlobalLoadBalanceReq) Descriptor() ([]byte, []int) {
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *GlobalLoadBalanceReq) GetTaskList() []*Task {
+	if x != nil {
+		return x.TaskList
+	}
+	return nil
+}
+
+type GlobalLoadBalanceResp struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GlobalLoadBalanceResp) Reset() {
+	*x = GlobalLoadBalanceResp{}
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GlobalLoadBalanceResp) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GlobalLoadBalanceResp) ProtoMessage() {}
+
+func (x *GlobalLoadBalanceResp) ProtoReflect() protoreflect.Message {
+	mi := &file_internal_rpc_proto_raft_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GlobalLoadBalanceResp.ProtoReflect.Descriptor instead.
+func (*GlobalLoadBalanceResp) Descriptor() ([]byte, []int) {
+	return file_internal_rpc_proto_raft_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GlobalLoadBalanceResp) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
 var File_internal_rpc_proto_raft_proto protoreflect.FileDescriptor
 
 const file_internal_rpc_proto_raft_proto_rawDesc = "" +
 	"\n" +
 	"\x1dinternal/rpc/proto/raft.proto\x12\x04raft\"1\n" +
 	"\x0eSendUAVInfoReq\x12\x1f\n" +
-	"\x03uav\x18\x01 \x01(\v2\r.raft.UAVInfoR\x03uav\"\xaa\x02\n" +
+	"\x03uav\x18\x01 \x01(\v2\r.raft.UAVInfoR\x03uav\"\xe4\x02\n" +
 	"\aUAVInfo\x12\x10\n" +
 	"\x03uid\x18\x01 \x01(\tR\x03uid\x12\x12\n" +
 	"\x04time\x18\x02 \x01(\tR\x04time\x12\x18\n" +
@@ -864,7 +1109,29 @@ const file_internal_rpc_proto_raft_proto_rawDesc = "" +
 	"\abattery\x18\x06 \x01(\v2\r.raft.BatteryR\abattery\x12\x1f\n" +
 	"\x03cpu\x18\a \x01(\v2\r.raft.CPUInfoR\x03cpu\x12(\n" +
 	"\x06memory\x18\b \x01(\v2\x10.raft.MemoryInfoR\x06memory\x12+\n" +
-	"\anetwork\x18\t \x01(\v2\x11.raft.NetWorkInfoR\anetwork\"4\n" +
+	"\anetwork\x18\t \x01(\v2\x11.raft.NetWorkInfoR\anetwork\x12 \n" +
+	"\x05tasks\x18\n" +
+	" \x03(\v2\n" +
+	".raft.TaskR\x05tasks\x12\x16\n" +
+	"\x06status\x18\v \x01(\tR\x06status\"\xd9\x03\n" +
+	"\x04Task\x12\x17\n" +
+	"\atask_id\x18\x01 \x01(\x05R\x06taskId\x12\x12\n" +
+	"\x04type\x18\x02 \x01(\tR\x04type\x12\x1a\n" +
+	"\bpriority\x18\x03 \x01(\x05R\bpriority\x12!\n" +
+	"\frequired_cpu\x18\x04 \x01(\x02R\vrequiredCpu\x12\x1b\n" +
+	"\tcpu_usage\x18\x05 \x01(\x02R\bcpuUsage\x12'\n" +
+	"\x0frequired_memory\x18\x06 \x01(\x02R\x0erequiredMemory\x12(\n" +
+	"\x04cost\x18\a \x03(\v2\x14.raft.Task.CostEntryR\x04cost\x12&\n" +
+	"\x06target\x18\b \x01(\v2\x0e.raft.PositionR\x06target\x12!\n" +
+	"\ftask_parents\x18\t \x03(\x05R\vtaskParents\x12#\n" +
+	"\rtask_children\x18\n" +
+	" \x03(\x05R\ftaskChildren\x12\x16\n" +
+	"\x06status\x18\v \x01(\tR\x06status\x12\x1a\n" +
+	"\bduration\x18\f \x01(\tR\bduration\x12\x18\n" +
+	"\asurplus\x18\r \x01(\tR\asurplus\x1a7\n" +
+	"\tCostEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x02R\x05value:\x028\x01\"4\n" +
 	"\bPosition\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x02R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x02R\x01y\x12\f\n" +
@@ -919,11 +1186,17 @@ const file_internal_rpc_proto_raft_proto_rawDesc = "" +
 	"\x04term\x18\x01 \x01(\x03R\x04term\x12\x1d\n" +
 	"\n" +
 	"leader_uid\x18\x02 \x01(\tR\tleaderUid\x12!\n" +
-	"\fvote_granted\x18\x03 \x01(\bR\vvoteGranted2\xa6\x01\n" +
+	"\fvote_granted\x18\x03 \x01(\bR\vvoteGranted\"?\n" +
+	"\x14GlobalLoadBalanceReq\x12'\n" +
+	"\ttask_list\x18\x01 \x03(\v2\n" +
+	".raft.TaskR\btaskList\"+\n" +
+	"\x15GlobalLoadBalanceResp\x12\x12\n" +
+	"\x04code\x18\x01 \x01(\tR\x04code2\xf4\x01\n" +
 	"\vRaftService\x12:\n" +
 	"\vSendUAVInfo\x12\x14.raft.SendUAVInfoReq\x1a\x15.raft.SendUAVInfoResp\x124\n" +
 	"\tAppendLog\x12\x12.raft.AppendLogReq\x1a\x13.raft.AppendLogResp\x12%\n" +
-	"\x04Vote\x12\r.raft.VoteReq\x1a\x0e.raft.VoteRespB\tZ\a./raft;b\x06proto3"
+	"\x04Vote\x12\r.raft.VoteReq\x1a\x0e.raft.VoteResp\x12L\n" +
+	"\x11GlobalLoadBalance\x12\x1a.raft.GlobalLoadBalanceReq\x1a\x1b.raft.GlobalLoadBalanceRespB\tZ\a./raft;b\x06proto3"
 
 var (
 	file_internal_rpc_proto_raft_proto_rawDescOnce sync.Once
@@ -937,44 +1210,54 @@ func file_internal_rpc_proto_raft_proto_rawDescGZIP() []byte {
 	return file_internal_rpc_proto_raft_proto_rawDescData
 }
 
-var file_internal_rpc_proto_raft_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_internal_rpc_proto_raft_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_internal_rpc_proto_raft_proto_goTypes = []any{
-	(*SendUAVInfoReq)(nil),  // 0: raft.SendUAVInfoReq
-	(*UAVInfo)(nil),         // 1: raft.UAVInfo
-	(*Position)(nil),        // 2: raft.Position
-	(*Battery)(nil),         // 3: raft.Battery
-	(*CPUInfo)(nil),         // 4: raft.CPUInfo
-	(*MemoryInfo)(nil),      // 5: raft.MemoryInfo
-	(*NetWorkInfo)(nil),     // 6: raft.NetWorkInfo
-	(*SendUAVInfoResp)(nil), // 7: raft.SendUAVInfoResp
-	(*AppendLogReq)(nil),    // 8: raft.AppendLogReq
-	(*LogsInfo)(nil),        // 9: raft.LogsInfo
-	(*AppendLogResp)(nil),   // 10: raft.AppendLogResp
-	(*VoteReq)(nil),         // 11: raft.VoteReq
-	(*VoteResp)(nil),        // 12: raft.VoteResp
-	nil,                     // 13: raft.LogsInfo.UavMapEntry
+	(*SendUAVInfoReq)(nil),        // 0: raft.SendUAVInfoReq
+	(*UAVInfo)(nil),               // 1: raft.UAVInfo
+	(*Task)(nil),                  // 2: raft.Task
+	(*Position)(nil),              // 3: raft.Position
+	(*Battery)(nil),               // 4: raft.Battery
+	(*CPUInfo)(nil),               // 5: raft.CPUInfo
+	(*MemoryInfo)(nil),            // 6: raft.MemoryInfo
+	(*NetWorkInfo)(nil),           // 7: raft.NetWorkInfo
+	(*SendUAVInfoResp)(nil),       // 8: raft.SendUAVInfoResp
+	(*AppendLogReq)(nil),          // 9: raft.AppendLogReq
+	(*LogsInfo)(nil),              // 10: raft.LogsInfo
+	(*AppendLogResp)(nil),         // 11: raft.AppendLogResp
+	(*VoteReq)(nil),               // 12: raft.VoteReq
+	(*VoteResp)(nil),              // 13: raft.VoteResp
+	(*GlobalLoadBalanceReq)(nil),  // 14: raft.GlobalLoadBalanceReq
+	(*GlobalLoadBalanceResp)(nil), // 15: raft.GlobalLoadBalanceResp
+	nil,                           // 16: raft.Task.CostEntry
+	nil,                           // 17: raft.LogsInfo.UavMapEntry
 }
 var file_internal_rpc_proto_raft_proto_depIdxs = []int32{
 	1,  // 0: raft.SendUAVInfoReq.uav:type_name -> raft.UAVInfo
-	2,  // 1: raft.UAVInfo.position:type_name -> raft.Position
-	3,  // 2: raft.UAVInfo.battery:type_name -> raft.Battery
-	4,  // 3: raft.UAVInfo.cpu:type_name -> raft.CPUInfo
-	5,  // 4: raft.UAVInfo.memory:type_name -> raft.MemoryInfo
-	6,  // 5: raft.UAVInfo.network:type_name -> raft.NetWorkInfo
-	9,  // 6: raft.AppendLogReq.logs:type_name -> raft.LogsInfo
-	13, // 7: raft.LogsInfo.uav_map:type_name -> raft.LogsInfo.UavMapEntry
-	1,  // 8: raft.LogsInfo.UavMapEntry.value:type_name -> raft.UAVInfo
-	0,  // 9: raft.RaftService.SendUAVInfo:input_type -> raft.SendUAVInfoReq
-	8,  // 10: raft.RaftService.AppendLog:input_type -> raft.AppendLogReq
-	11, // 11: raft.RaftService.Vote:input_type -> raft.VoteReq
-	7,  // 12: raft.RaftService.SendUAVInfo:output_type -> raft.SendUAVInfoResp
-	10, // 13: raft.RaftService.AppendLog:output_type -> raft.AppendLogResp
-	12, // 14: raft.RaftService.Vote:output_type -> raft.VoteResp
-	12, // [12:15] is the sub-list for method output_type
-	9,  // [9:12] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	3,  // 1: raft.UAVInfo.position:type_name -> raft.Position
+	4,  // 2: raft.UAVInfo.battery:type_name -> raft.Battery
+	5,  // 3: raft.UAVInfo.cpu:type_name -> raft.CPUInfo
+	6,  // 4: raft.UAVInfo.memory:type_name -> raft.MemoryInfo
+	7,  // 5: raft.UAVInfo.network:type_name -> raft.NetWorkInfo
+	2,  // 6: raft.UAVInfo.tasks:type_name -> raft.Task
+	16, // 7: raft.Task.cost:type_name -> raft.Task.CostEntry
+	3,  // 8: raft.Task.target:type_name -> raft.Position
+	10, // 9: raft.AppendLogReq.logs:type_name -> raft.LogsInfo
+	17, // 10: raft.LogsInfo.uav_map:type_name -> raft.LogsInfo.UavMapEntry
+	2,  // 11: raft.GlobalLoadBalanceReq.task_list:type_name -> raft.Task
+	1,  // 12: raft.LogsInfo.UavMapEntry.value:type_name -> raft.UAVInfo
+	0,  // 13: raft.RaftService.SendUAVInfo:input_type -> raft.SendUAVInfoReq
+	9,  // 14: raft.RaftService.AppendLog:input_type -> raft.AppendLogReq
+	12, // 15: raft.RaftService.Vote:input_type -> raft.VoteReq
+	14, // 16: raft.RaftService.GlobalLoadBalance:input_type -> raft.GlobalLoadBalanceReq
+	8,  // 17: raft.RaftService.SendUAVInfo:output_type -> raft.SendUAVInfoResp
+	11, // 18: raft.RaftService.AppendLog:output_type -> raft.AppendLogResp
+	13, // 19: raft.RaftService.Vote:output_type -> raft.VoteResp
+	15, // 20: raft.RaftService.GlobalLoadBalance:output_type -> raft.GlobalLoadBalanceResp
+	17, // [17:21] is the sub-list for method output_type
+	13, // [13:17] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_internal_rpc_proto_raft_proto_init() }
@@ -988,7 +1271,7 @@ func file_internal_rpc_proto_raft_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_internal_rpc_proto_raft_proto_rawDesc), len(file_internal_rpc_proto_raft_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
